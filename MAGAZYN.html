@@ -1,0 +1,3148 @@
+<!DOCTYPE html>
+
+<html lang="pl">
+<head>
+<meta charset="utf-8"/>
+<title>Magazyn - edytowalne partie</title>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<style>
+:root{
+  --ok:#0f9d58; --warn:#f4b400; --bad:#db4437;
+  --bg:#f7f8fa; --card:#fff; --border:#e3e6ea;
+}
+html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg); overflow:hidden;}
+.container-full{padding:12px;display:grid;grid-template-rows:auto 1fr auto;gap:12px;height:100vh;box-sizing:border-box}
+.top-row{display:flex;align-items:center;gap:8px;position:relative;flex-direction:column}
+#modeInput,#scanInput{width:60%;padding:10px;font-size:1.05rem;margin-bottom:6px}
+.controls-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+#searchDropdown{position:absolute;background:#fff;border:1px solid #ccc;max-height:240px;overflow:auto;width:60%;display:none;z-index:1000;border-radius:6px}
+#searchDropdown div{padding:8px 10px;cursor:pointer}
+#searchDropdown div:hover{background:#f0f0f0}
+.main-grid{display:grid;grid-template-columns:1fr 420px;gap:12px;min-height:0;overflow:hidden}
+.left-panel,.right-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;overflow:auto}
+.product-header{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+.product-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.product-row .field{min-width:120px}
+label{font-weight:600;font-size:1.3rem;text-align:center;margin-bottom:4px}
+.total-box{width:160px;text-align:center;border:1px solid var(--border);padding:8px;border-radius:6px;background:#fff}
+.total-box .num{font-size: 3rem;font-weight:800}
+.parties-table{width:100%;border-collapse:collapse;margin-top:6px}
+.parties-table th,.parties-table td{border:1px solid var(--border);padding:8px;text-align:center;font-size:0.95rem}
+.parties-table input{width:90%;padding:4px;font-size:0.95rem;text-align:center}
+.parties-table tr.row-red{background:#ffeceb}
+.parties-table tr.row-yellow{background:#fff8e1}
+.lists-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.list-block{background:transparent;padding:4px;border-radius:6px;}
+.select-title{font-weight:700;margin-bottom:6px;display:block}
+select.form-select{width:100%;font-size:0.9rem;white-space:nowrap;overflow:auto;text-overflow:ellipsis;text-align:center;height:60px;}
+.history-title{font-weight:700;margin-bottom:8px}
+#historyBox{overflow:auto;border:1px solid var(--border);background:#fafafa;padding:8px;border-radius:6px;height:46vh;font-size:0.95rem;white-space:pre-line;}
+#allProductsBoxFull{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999;overflow:auto;padding:20px;box-sizing:border-box}
+#closeAllProducts{position:absolute;top:10px;right:20px;font-size:20px;cursor:pointer;background:#eee;border:none;padding:6px 10px;border-radius:4px}
+#undoAllProducts{position:absolute;top:50px;right:20px;font-size:14px;cursor:pointer;background:#eee;border:none;padding:6px 10px;border-radius:4px}
+
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}#searchDropdown{width:85%}#modeInput,#scanInput{width:85%}}
+
+/* Modal styles for adding product / batch */
+#overlayModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1500; }
+.modalCard { display:none; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:var(--card); border-radius:8px; padding:18px; width:420px; box-shadow:0 10px 30px rgba(0,0,0,0.2); z-index:1600; }
+.modalCard h4{ margin-top:0; margin-bottom:12px; }
+.modalRow{ display:flex; gap:8px; margin-bottom:8px; }
+.modalRow input, textarea { flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:1rem; text-align:center }
+.modalActions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px;}
+.btn-modal{ padding:8px 12px; border-radius:6px; border: none; cursor:pointer;}
+.btn-modal.primary{ background:#0d6efd; color:#fff;}
+.btn-modal.ghost{ background:#f1f1f1;}
+.option-expired{ background:#ffecec; color:#000; }
+.option-soon{ background:#fff8e1; color:#000; }
+.option-brak{ background:#ffdede; color:#000; }
+.option-one{ background:#fff7b0; color:#000; }
+
+#fieldName, #fieldShelf, #fieldBarcode, .modalRow input { text-align:center; }
+#fieldName, #fieldShelf, #fieldBarcode { font-size:1.6rem; padding:14px; text-align:center; }
+
+.list-equal{height:110px !important; overflow:auto; font-size:0.9rem;}
+.products-table{width:100%;border-collapse:collapse}
+.products-table th,.products-table td{border:1px solid var(--border);padding:8px;text-align:center}
+.products-table input{width:95%;padding:6px;text-align:center;border:1px solid #ddd;border-radius:4px}
+.action-btn{padding:6px 8px;margin:0 2px}
+
+#loginOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center}
+#loginCard{background:var(--card);padding:20px;border-radius:8px;width:360px;text-align:center}
+#loginCard input{width:100%;padding:10px;margin-top:10px;font-size:1.1rem;text-align:center}
+#logoutBtn{margin-left:8px; position:absolute; right:16px; top:12px; z-index:3000;}
+
+.top-row{position:relative}
+
+@media(max-width:700px){
+  #modeInput,#scanInput{width:85%}
+  #logoutBtn{right:8px;top:8px}
+  .list-equal{height:100px}
+}
+
+#allProductsSearchWrap{display:flex;justify-content:center;margin-bottom:8px;gap:8px;align-items:center}
+#allProductsSearch{width:50%;padding:8px;border:1px solid var(--border);border-radius:6px;text-align:center}
+#allSearchDropdown{position:relative;}
+
+.left-panel,.right-panel{max-height:calc(100vh - 220px);overflow:auto}
+.footer-bar{max-height:64px;overflow:hidden;align-items:center;display:flex;gap:12px;padding:10px}
+
+.hidden-inline { display:inline-block; height:0; width:0; overflow:hidden; }
+.highlight-row{outline:3px solid #ffd54f}
+.bigf{font-size:1.8rem;font-weight:700;padding:14px;} .bigf2{font-size:3.2rem!important;font-weight:900!important;padding:26px!important;letter-spacing:1px!important;}
+
+#searchDropdown .selected{background:#e6f0ff}
+
+/* SHRINK ROW HEIGHT + CENTER BARCODE IN SORT WINDOWS */
+
+
+/* Ensure barcode column is centered horizontally */
+#sortProduktyTable td:nth-child(2),
+#sortPrzyprawyTable td:nth-child(2) {
+    text-align: center !important;
+}
+
+</style>
+<style>
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  button, .no-print { display:none !important; }
+  table { page-break-inside:auto; width:100%; }
+  tr { page-break-inside:avoid; page-break-after:auto; }
+  thead { display:table-header-group; }
+}
+</style>
+<style>
+@media print {
+  #sortProduktyTable td, #sortProduktyTable th,
+  #sortPrzyprawyTable td, #sortPrzyprawyTable th {
+      padding: 0.6px !important;
+      font-size: 0.42rem !important;
+      line-height: 1 !important;
+      vertical-align: middle !important;
+      text-align: center !important;
+  }
+}
+</style>
+<style>
+@media print {
+  #sortProduktyTable td:nth-child(2),
+  #sortPrzyprawyTable td:nth-child(2){
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+  }
+  #sortProduktyTable::before,
+  #sortPrzyprawyTable::before {
+    content: "ZAPASY W SPIŻARNI";
+    display: block;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+}
+</style>
+
+<style>
+.container-full{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+#allProductsBoxFull{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+.main-grid{
+    background:#cce7ff !important;
+    padding:12px !important;
+    border-radius:12px;
+}
+</style>
+
+
+<style>
+.left-panel{
+    background:transparent !important;
+}
+</style>
+
+</head>
+<body>
+<div class="container-full">
+<div class="top-row">
+<input autocomplete="off" autofocus="" id="modeInput" placeholder="Wpisz 333333 lub 111111 lub 222222"/>
+<div style="position:relative;width:100%;display:flex;justify-content:center;">
+<input autocomplete="off" id="scanInput" placeholder="WYSZUKAJ LUB ZESKANUJ KOD"/>
+<div id="searchDropdown"></div>
+</div>
+<div class="controls-right">
+<button class="btn btn-secondary btn-sm-wide" id="goHomeBtn">Powrót do strony głównej</button>
+<button class="btn btn-success btn-sm-wide" id="addNewBtn">Dodaj nowy produkt</button>
+<button class="btn btn-warning btn-sm-wide" id="addBatchBtn">Dodaj nową partię</button>
+<button class="btn btn-primary btn-sm-wide" id="saveChangesBtn">ZAPISAĆ ZMIANY ?</button>
+</div>
+<!-- Wyloguj w prawym górnym rogu -->
+<button class="btn btn-outline-secondary btn-sm-wide" id="logoutBtn">Wyloguj</button>
+</div>
+<div class="main-grid">
+<div class="left-panel">
+<div class="product-header">
+<div class="product-left" style="flex:1">
+<!-- Nazwa | Kod kreskowy | Regał | Ilość całk. (opis nad akcjami) -->
+<div class="product-row">
+<div class="field" style="flex:2">
+<label style="text-align:center;width:100%;">Nazwa</label>
+<input class="form-control bigf" id="fieldName" style="font-weight:700"/>
+</div>
+<div class="field" style="flex:1">
+<label style="text-align:center;width:100%;">Regał</label>
+<input class="form-control bigf" id="fieldShelf" style="font-weight:700"/>
+</div>
+<div class="field" style="flex:1">
+<label style="text-align:center;width:100%;">Kod kreskowy</label>
+<input class="form-control bigf" id="fieldBarcode" style="font-weight:700"/>
+</div>
+<div class="field" style="flex:1">
+<label style="text-align:center;width:100%;">Ilość (całk.)</label>
+<div class="total-box" style="margin-top:4px">
+<div class="num bigf" id="fieldTotal">0</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<table class="parties-table" id="partiesTable">
+<thead><tr><th>Data ważności lub Data produkcji</th><th>Ilość</th><th>Dni do/po term.</th><th>Kod kreskowy</th><th>Akcje</th></tr></thead>
+<tbody></tbody>
+</table>
+<div class="lists-grid" style="margin-top:12px;">
+<div class="list-block">
+<span class="select-title">PRZETERMINOWANE</span>
+<select class="form-select list-equal" id="expiredList" size="6"></select>
+</div>
+<div class="list-block">
+<span class="select-title">OSTATNIE DNI (0-30)</span>
+<select class="form-select list-equal" id="soonList" size="6"></select>
+</div>
+<div class="list-block">
+<span class="select-title">BRAK W MAGAZYNIE</span>
+<select class="form-select list-equal" id="brakList" size="6"></select>
+</div>
+<div class="list-block">
+<span class="select-title">PRODUKTY Z 1 SZT.</span>
+<select class="form-select list-equal" id="oneList" size="6"></select>
+</div>
+</div>
+</div>
+<div class="right-panel">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<h5 style="margin:0">Historia zmian</h5>
+<button class="btn btn-sm btn-outline-secondary" id="clearHistoryBtn">Wyczyść historię</button>
+</div>
+<div style="font-size:0.9rem;color:#666;margin-top:6px">Ostatnie operacje</div>
+<div class="mt-3" id="historyBox"></div>
+</div>
+</div>
+<div aria-hidden="true" id="allProductsBoxFull"><div id="totalZaprawyQtyBox" style="position:absolute;top:10px;left:20px;font-size:18px;font-weight:700;padding:6px 10px;border:2px solid #000;border-radius:6px;background:#fff;">Ilość wszystkich zapraw w magazynie: <span id="totalZaprawyQty">0</span></div>
+<div id="yearDesc" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:16px;font-weight:700;">Zmieniając rok widać ilość zapraw z danego roku</div>
+<div id="yearZaprawBox" style="position:absolute;top: 40px;left:50%;transform:translateX(-50%);font-size:18px;font-weight:700;padding:6px 10px;border:2px solid #000;border-radius:6px;background:#ffffff;">
+<input id="yearZaprawBoxLabel" value="Ilość zapraw z 2023" style="width:220px;border:none;background:transparent;font-weight:700;">
+: <span id="yearZaprawQty">0</span>
+</div>
+
+<button id="closeAllProducts">× Zamknij</button><div id="totalAllProductsBox" style="position:absolute;top:10px;right:160px;font-size:18px;font-weight:700;padding:6px 10px;border:2px solid #000;border-radius:6px;background:#fff;">Ilość wszystkich produktów i przypraw w magazynie: <span id="totalAllQty">0</span></div>
+<div id="totalProductsOnlyBox" style="position:absolute;top:50px;right:160px;font-size:18px;font-weight:700;padding:6px 10px;border:2px solid #000;border-radius:6px;background:#fff;">Ilość produktów w magazynie: <span id="totalProductsQty">0</span></div><div id="totalSpicesQtyBox" style="position:absolute;top:90px;right:160px;font-size:18px;font-weight:700;padding:6px 10px;border:2px solid #000;border-radius:6px;background:#fff;">Ilość przypraw w magazynie: <span id="totalSpicesQty">0</span></div>
+<button id="undoAllProducts">Cofnij</button>
+<div id="allProductsBoxContent" style="margin-top:40px;"></div>
+</div>
+<div class="footer-bar" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;display:flex;align-items:center;gap:12px;">
+<button class="btn btn-primary btn-sm-wide" id="showAllBtn">Pokaż wszystkie produkty</button>
+<button class="btn btn-success btn-sm-wide" id="showSortedBtn" style="background:#0f9d58;border-color:#0f9d58;">Posortowane produkty od 1 szt.</button>
+</div>
+<div id="overlayModal"></div>
+<!-- Add New Product Modal (unchanged manual add) -->
+<div aria-modal="true" class="modalCard" id="addProductModal" role="dialog">
+<h4>Dodaj nowy produkt</h4>
+<div class="modalRow"><input autocomplete="off" id="modal_name" placeholder="Nazwa"/></div>
+<div class="modalRow"><input autocomplete="off" id="modal_qty" min="1" placeholder="Ilość" type="number"/></div>
+<div class="modalRow"><input autocomplete="off" id="modal_shelf" placeholder="Regał"/></div>
+<div class="modalRow"><input autocomplete="off" id="modal_barcode" placeholder="Kod kreskowy"/></div>
+<div style="display:flex;gap:6px;">
+<input autocomplete="off" id="modal_day" max="31" min="1" placeholder="Dzień" style="width:80px" type="number"/>
+<input autocomplete="off" id="modal_month" max="12" min="1" placeholder="Miesiąc" style="width:100px" type="number"/>
+<input autocomplete="off" id="modal_year" max="3000" min="1900" placeholder="Rok" style="width:120px" type="number"/>
+</div>
+<div class="modalActions">
+<button class="btn-modal ghost" id="modal_add_cancel">Anuluj</button>
+<button class="btn-modal primary" id="modal_add_confirm">Dodaj</button>
+</div>
+</div>
+<!-- Scanner date modal for 222222 -->
+<div aria-modal="true" class="modalCard" id="scanDateModal" role="dialog">
+<h4>Data ważności (dzień / miesiąc / rok)</h4>
+<div class="modalRow">
+<input id="scan_day" max="31" min="1" placeholder="Dzień" type="number"/>
+<input id="scan_month" max="12" min="1" placeholder="Miesiąc" type="number"/>
+<input id="scan_year" max="3000" min="1900" placeholder="Rok" type="number"/>
+</div>
+<div class="modalActions">
+<button class="btn-modal ghost" id="scan_cancel">Anuluj</button>
+<button class="btn-modal primary" id="scan_confirm">Zatwierdź</button>
+</div>
+</div>
+<!-- Confirm modal for adding to last date -->
+<div aria-modal="true" class="modalCard" id="scanConfirmModal" role="dialog">
+<h4 id="scanConfirmText">Dodać 1 szt. do partii z datą?</h4>
+<div class="modalActions">
+<button class="btn-modal ghost" id="scanConfirmNo">Nie</button>
+<button class="btn-modal primary" id="scanConfirmYes">Tak</button>
+</div>
+</div>
+<!-- Add Batch Modal (manual unchanged) -->
+<div aria-modal="true" class="modalCard" id="addBatchModal" role="dialog">
+<h4>Dodaj nową partię</h4>
+<div class="modalRow"><input autocomplete="off" id="modal_batch_qty" min="1" placeholder="Ilość" type="number"/></div>
+<div class="modalActions">
+<button class="btn-modal ghost" id="modal_batch_cancel">Anuluj</button>
+<button class="btn-modal primary" id="modal_batch_confirm">Dodaj partię</button>
+</div>
+</div>
+<div id="loginOverlay" style="display:none">
+<div id="loginCard">
+<h4>Logowanie do magazynu</h4>
+<div>Wpisz hasło lub zeskanuj kod:</div>
+<input autocomplete="off" id="loginInput" placeholder="Wpisz hasło"/>
+<div style="margin-top:10px;display:flex;gap:8px;justify-content:center">
+<button class="btn btn-primary" id="loginBtn">Zaloguj</button>
+</div>
+<div style="margin-top:10px;color:#666;font-size:0.9rem"></div>
+</div>
+</div>
+</div>
+<script>
+// Dane i pomocnicze
+function getDisplayName(name){
+  const m=name.match(/\(([^)]+)\)/);
+  if(m) return m[1].toUpperCase();
+  return name;
+}
+
+let products = JSON.parse(localStorage.getItem('products')||'[]');
+let history = JSON.parse(localStorage.getItem('history')||'[]');
+let lastAction = JSON.parse(localStorage.getItem('lastAction')||'null');
+let currentBarcode = null;
+let editSnapshot = null;
+let listFilter = {type:null, barcode:null};
+const LOGIN_PASSWORD = '85089257';
+const msDay = 1000*60*60*24;
+const today0 = ()=>{const d=new Date(); d.setHours(0,0,0,0); return d;};
+function daysUntil(expiryStr){ if(!expiryStr) return null; const expiry=new Date(expiryStr); expiry.setHours(0,0,0,0); return Math.round((expiry-today0())/msDay); }
+function currentDateISO(){ const d=new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
+function productTotal(prod){ if(!prod||!Array.isArray(prod.parties)) return 0; return prod.parties.reduce((s,p)=>s+(parseInt(p.qty)||0),0); }
+
+// map for remembering last scanned date per product (in-memory + sessionStorage)
+let lastScannedDate = JSON.parse(sessionStorage.getItem('lastScannedDate')||'{}');
+let lastScannedCode = null;
+function saveLastScanned(){ sessionStorage.setItem('lastScannedDate', JSON.stringify(lastScannedDate)); }
+
+function buildHistoryEntry(productName, totalBefore, totalAfter, details){ const lines=[]; if(history.length>0) lines.push('-------------------------'); lines.push(productName); lines.push(`Było: ${totalBefore} SZT.`); lines.push(`Jest: ${totalAfter} SZT.`); const diff = totalAfter-totalBefore; if(diff>0) lines.push(`Dodano: ${diff} SZT.`); else if(diff<0) lines.push(`Odjęto: ${Math.abs(diff)} SZT.`); if(Array.isArray(details)&&details.length){ details.forEach(d=>{ if(d.expiry) lines.push(` - ${d.qty} SZT. z daty ${d.expiry}`); else lines.push(` - ${d.qty} SZT.`); }); } const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); lines.push(`\nDATA:  **${dd}-${mm}-${yyyy}**`); return lines.join('\n'); }
+
+function renderHistory(){ const hb=document.getElementById('historyBox'); hb.innerHTML=''; history.slice(0,500).forEach(h=>{ const d=document.createElement('div'); d.className='history-row'; d.textContent=h; hb.appendChild(d); }); }
+
+ // Clear history button handler (FIX)
+ document.getElementById('clearHistoryBtn').addEventListener('click', ()=>{ 
+   if(!confirm('Czy na pewno chcesz wyczyścić historię?')) return;
+   history = [];
+   localStorage.removeItem('history');
+   renderHistory();
+   alert('Historia wyczyszczona.');
+   // keep lastAction and products intact
+ });
+
+function saveProductsToStorage(){ localStorage.setItem('products', JSON.stringify(products)); localStorage.setItem('lastAction', JSON.stringify(lastAction)); }
+
+function renderAll(){ const prod = products.find(p=>p.barcode===currentBarcode); document.getElementById('fieldName').value = prod?prod.name:''; document.getElementById('fieldShelf').value = prod?prod.shelf:''; document.getElementById('fieldBarcode').value = prod?prod.barcode:''; const tbody = document.querySelector('#partiesTable tbody'); tbody.innerHTML = '<tr><td colspan=\"5\" style=\"color:#666\">Brak partii</td></tr>';
+  document.getElementById('fieldTotal').innerText='0';
+  if(prod && Array.isArray(prod.parties) && prod.parties.length){ tbody.innerHTML=''; let total=0; prod.parties.forEach((pt,idx)=>{ if((parseInt(pt.qty)||0)===0 || !pt.expiry) return; total+=parseInt(pt.qty); const d=daysUntil(pt.expiry); let daysText = (d===null)?'brak daty':(d<0?`${Math.abs(d)} dni po terminie`:`Zostało ${d} dni do daty ważności`); const tr=document.createElement('tr'); let isZap = (prod.name||'').toLowerCase().includes('(zaprawy)'); if(!isZap && d<0) tr.className='row-red'; else if(!isZap && d<=30) tr.className='row-yellow'; tr.innerHTML = `<td style="display:flex;gap:6px;justify-content:center;"><input type="text" maxlength="2" class="exp_day expirySegment" data-idx="${idx}" value="${pt.expiry?pt.expiry.split('-')[2]:''}" placeholder="DD" style="width:50px;text-align:center;"><input type="text" maxlength="2" class="exp_month expirySegment" data-idx="${idx}" value="${pt.expiry?pt.expiry.split('-')[1]:''}" placeholder="MM" style="width:50px;text-align:center;"><input type="text" maxlength="4" class="exp_year expirySegment" data-idx="${idx}" value="${pt.expiry?pt.expiry.split('-')[0]:''}" placeholder="RRRR" style="width:70px;text-align:center;"></td><td><input type="number" value="${pt.qty}" data-idx="${idx}" class="qtyInput" min="0"></td><td>${(/\(([^)]+)\)/.test(prod.name) ? getDisplayName(prod.name) : daysText)}</td><td><input type="text" class="codeInput" data-idx="${idx}" value="${pt.code||prod.barcode||''}" style="width:120px;text-align:center;"></td><td><button data-idx="${idx}" class="btn btn-sm btn-danger deleteBtn">Usuń</button></td>`; tbody.appendChild(tr); }); if(total>0) document.getElementById('fieldTotal').innerText = total; else document.getElementById('fieldTotal').innerHTML = '<span style="color:#ff0000;font-weight:900;">BRAK PRODUKTU W MAGAZYNIE</span>'; } else { if(currentBarcode){ document.getElementById('fieldTotal').innerHTML = '<span style="color:#ff0000;font-weight:900;">BRAK PRODUKTU W MAGAZYNIE</span>'; tbody.innerHTML = '<tr><td colspan=\"5\" style=\"color:#666\">Brak partii</td></tr>'; } else { document.getElementById('fieldTotal').innerText = '0'; } }
+  // wire edits
+  tbody.querySelectorAll('.qtyInput').forEach(input=>{ input.addEventListener('change', e=>{ const i=parseInt(e.target.dataset.idx); const val=parseInt(e.target.value); const prodRef = products.find(p=>p.barcode===currentBarcode); if(!prodRef) return; if(isNaN(val)||val<0){ e.target.value = prodRef.parties[i].qty; return; } prodRef.parties[i].qty = val; renderAll(); }); });
+  tbody.querySelectorAll('.expiryInput').forEach(input=>{ input.addEventListener('change', e=>{ const i=parseInt(e.target.dataset.idx); const val=e.target.value; const prodRef = products.find(p=>p.barcode===currentBarcode); if(!prodRef) return; prodRef.parties[i].expiry = val; renderAll(); }); });
+  tbody.querySelectorAll('.deleteBtn').forEach(btn=>{ btn.addEventListener('click', e=>{ const i=parseInt(e.target.dataset.idx); const prodRef = products.find(p=>p.barcode===currentBarcode); if(!prodRef) return; prodRef.parties[i].qty = 0; renderAll(); }); });
+  updateLists(); }
+
+function updateLists(){ const expiredList=document.getElementById('expiredList'); const soonList=document.getElementById('soonList'); const brakList=document.getElementById('brakList'); const oneList=document.getElementById('oneList'); // build in fragments to minimize reflow
+  const fragExpired=document.createDocumentFragment(); const fragSoon=document.createDocumentFragment(); const fragBrak=document.createDocumentFragment(); const fragOne=document.createDocumentFragment(); expiredList.innerHTML=''; soonList.innerHTML=''; brakList.innerHTML=''; oneList.innerHTML=''; const makeOption=(text,prodBarcode,prodName,extra,cssClass)=>{ const opt=document.createElement('option'); opt.textContent=text; opt.dataset.barcode=prodBarcode||''; opt.dataset.name=prodName||''; opt.dataset.extra=extra||''; if(cssClass) opt.className=cssClass; return opt; };
+  // sort once into a local array to avoid modifying original order too often
+  const prods = products.slice().sort((a,b)=>((a.name||'').toLowerCase()).localeCompare((b.name||'').toLowerCase()));
+  prods.forEach(prod=>{
+    let isZap = (prod.name||'').toLowerCase().includes('(zaprawy)'); const total = productTotal(prod); if(Array.isArray(prod.parties) && productTotal(prod) > 0){
+      prod.parties.forEach(pt=>{ if(!pt.expiry) return; const d=daysUntil(pt.expiry); const txt = d<0 ? `${prod.name} - ${Math.abs(d)} dni po terminie (${pt.expiry})` : `${prod.name} - ${d} dni do terminu (${pt.expiry})`; if(!isZap && (parseInt(pt.qty)||0)>0 && d<0) fragExpired.appendChild(makeOption(txt, prod.barcode, prod.name, pt.expiry, 'option-expired')); else if(!isZap && (parseInt(pt.qty)||0)>0 && d<=30) fragSoon.appendChild(makeOption(txt, prod.barcode, prod.name, pt.expiry, 'option-soon')); });
+    }
+    if(total===0){ fragBrak.appendChild(makeOption(`${prod.name}`, prod.barcode, prod.name, '', 'option-brak')); }
+    if(total===1){ fragOne.appendChild(makeOption(`${prod.name}`, prod.barcode, prod.name, '', 'option-one')); }
+  });
+  // attach fragments
+  expiredList.appendChild(fragExpired);
+  soonList.appendChild(fragSoon);
+  brakList.appendChild(fragBrak);
+  oneList.appendChild(fragOne);
+
+  // if a product is selected, filter to options matching barcode to keep UI consistent
+  if(currentBarcode){ [expiredList,soonList,brakList,oneList].forEach(sel=>{ Array.from(sel.options).forEach(opt=>{ const keep = (opt.dataset.barcode && opt.dataset.barcode===currentBarcode); if(!keep) opt.remove(); }); }); }
+  const wire=(sel,type)=>{ sel.onchange=()=>{ const opt = sel.selectedOptions[0]; if(!opt) return; const bc = opt.dataset.barcode; if(bc) currentBarcode=bc; else{ const nm=opt.dataset.name; const p=products.find(pp=>pp.name===nm); if(p) currentBarcode=p.barcode; } listFilter={type:type,barcode:opt.dataset.barcode,name:opt.dataset.name}; takeEditSnapshot(); renderAll(); focusModeInput(); }; sel.ondblclick=()=>{ sel.onchange(); }; };
+  wire(expiredList,'expired'); wire(soonList,'soon'); wire(brakList,'brak'); wire(oneList,'one'); }
+
+function takeEditSnapshot(){ if(!currentBarcode){ editSnapshot=null; return; } const p = products.find(x=>x.barcode===currentBarcode); if(!p){ editSnapshot=null; return; } editSnapshot = JSON.parse(JSON.stringify(p)); }
+
+// Save changes
+document.getElementById('saveChangesBtn').addEventListener('click', ()=>{ if(!currentBarcode) return; const prod = products.find(p=>p.barcode===currentBarcode); if(!prod) return; const totalBefore = productTotal(editSnapshot||prod); const oldName = editSnapshot?editSnapshot.name:prod.name; prod.name = document.getElementById('fieldName').value.trim(); prod.shelf = document.getElementById('fieldShelf').value.trim(); const newBarcodeVal = document.getElementById('fieldBarcode').value.trim(); if(newBarcodeVal !== prod.barcode && products.find(p=>p.barcode===newBarcodeVal)){ alert('Inny produkt już używa tego kodu kreskowego. Wybierz inny.'); document.getElementById('fieldBarcode').value = prod.barcode; return; } prod.barcode = newBarcodeVal; currentBarcode = prod.barcode; 
+const tbody = document.querySelector('#partiesTable tbody');
+const newParties = [];
+tbody.querySelectorAll('tr').forEach(tr=>{
+    const dayEl = tr.querySelector('.exp_day');
+    const monthEl = tr.querySelector('.exp_month');
+    const yearEl = tr.querySelector('.exp_year');
+    const qtyInput = tr.querySelector('.qtyInput');
+    const codeInput = tr.querySelector('.codeInput');
+    if(!dayEl || !monthEl || !yearEl || !qtyInput) return;
+    const dd = dayEl.value.padStart(2,'0');
+    const mm = monthEl.value.padStart(2,'0');
+    const yyyy = yearEl.value.padStart(4,'0');
+    const expiryVal = `${yyyy}-${mm}-${dd}`;
+    let qtyVal = parseInt(qtyInput.value);
+    if(isNaN(qtyVal) || qtyVal<=0) return;
+    const scannedCode = (lastScannedCode && lastScannedCode.trim()) || document.getElementById('scanInput').value.trim();
+    const codeVal = codeInput ? codeInput.value.trim() : '';
+    newParties.push({ expiry: expiryVal, qty: qtyVal, code: codeVal });
+});
+prod.parties = newParties;
+ const totalAfter = productTotal(prod); let details = []; if(editSnapshot){ const prevTotal = productTotal(editSnapshot); const diff = totalAfter - prevTotal; if(diff !== 0) details.push({ qty: Math.abs(diff), expiry: '' }); } else { details.push({ qty: totalAfter, expiry: '' }); } const entry = buildHistoryEntry(oldName, totalBefore, totalAfter, details); history.unshift(entry); if(history.length>1000) history.length=1000; localStorage.setItem('history', JSON.stringify(history)); saveProductsToStorage(); takeEditSnapshot(); renderHistory(); renderAll(); focusModeInput(); });
+
+// Modale add
+const overlayModal = document.getElementById('overlayModal');
+const addProductModal = document.getElementById('addProductModal');
+const addBatchModal = document.getElementById('addBatchModal');
+const scanDateModal = document.getElementById('scanDateModal');
+const scanConfirmModal = document.getElementById('scanConfirmModal');
+let pendingScanBarcode = null; // barcode currently in scan flow
+
+function openAddProductModal(prefillBarcode){ overlayModal.style.display='block'; addProductModal.style.display='block'; document.getElementById('modal_name').value=''; document.getElementById('modal_qty').value=''; document.getElementById('modal_shelf').value=''; document.getElementById('modal_barcode').value = prefillBarcode||''; document.getElementById('modal_day').value=''; document.getElementById('modal_month').value=''; document.getElementById('modal_year').value=''; setTimeout(()=>{ document.getElementById('modal_name').focus(); },50); }
+function closeAddProductModal(){ overlayModal.style.display='none'; addProductModal.style.display='none'; }
+
+document.getElementById('addNewBtn').addEventListener('click', ()=>{ openAddProductModal(); });
+
+document.getElementById('modal_add_confirm').addEventListener('click', ()=>{
+  const name = document.getElementById('modal_name').value.trim();
+  const qty = parseInt(document.getElementById('modal_qty').value);
+  const shelf = document.getElementById('modal_shelf').value.trim();
+  const scannedCode = document.getElementById('scanInput').value.trim();
+  const barcode = scannedCode || document.getElementById('modal_barcode').value.trim() || ('BC'+Date.now()+Math.random());
+  const day = document.getElementById('modal_day').value.trim();
+  const month = document.getElementById('modal_month').value.trim();
+  const year = document.getElementById('modal_year').value.trim();
+
+  if(!name || isNaN(qty) || qty <= 0 || !shelf){
+    alert('Uzupełnij pola: Nazwa, Ilość (>0) i Regał');
+    return;
+  }
+
+  const now = new Date();
+  const dd = String(day || now.getDate()).padStart(2,'0');
+  const mm = String(month || (now.getMonth()+1)).padStart(2,'0');
+  const yyyy = String(year || now.getFullYear());
+  const expiryISO = `${yyyy}-${mm}-${dd}`;
+
+  // Jeśli produkt o takiej samej nazwie już istnieje – dokładamy partię do niego
+  let same = products.find(p => (p.name || '').toLowerCase() === name.toLowerCase());
+  if(same){
+    const totalBefore = productTotal(same);
+    if(!Array.isArray(same.parties)) same.parties = [];
+    same.parties.push({ expiry: expiryISO, qty: qty, code: scannedCode || barcode });
+    const totalAfter = productTotal(same);
+    const entry = buildHistoryEntry(same.name, totalBefore, totalAfter, [{ qty: qty, expiry: expiryISO }]);
+    history.unshift(entry);
+    if(history.length > 1000) history.length = 1000;
+    localStorage.setItem('history', JSON.stringify(history));
+    saveProductsToStorage();
+    closeAddProductModal();
+    renderHistory();
+    renderAll();
+    focusModeInput();
+    return;
+  }
+
+  // Nowy produkt
+  products.push({
+    name: name,
+    shelf: shelf,
+    barcode: scannedCode || barcode,
+    parties: [ { expiry: expiryISO, qty: qty, code: scannedCode || barcode } ]
+  });
+  const entry = buildHistoryEntry(name, 0, qty, [{ qty: qty, expiry: expiryISO }]);
+  history.unshift(entry);
+  if(history.length > 1000) history.length = 1000;
+  localStorage.setItem('history', JSON.stringify(history));
+  saveProductsToStorage();
+  closeAddProductModal();
+  renderHistory();
+  renderAll();
+  focusModeInput();
+});
+
+document.getElementById('modal_add_cancel').addEventListener('click', ()=>{ closeAddProductModal(); focusModeInput(); });
+
+function openAddBatchModal(){ if(!currentBarcode){ alert('Wybierz produkt najpierw.'); return; } overlayModal.style.display='block'; addBatchModal.style.display='block'; document.getElementById('modal_batch_qty').value=''; setTimeout(()=>{ document.getElementById('modal_batch_qty').focus(); },50); }
+function closeAddBatchModal(){ overlayModal.style.display='none'; addBatchModal.style.display='none'; }
+
+document.getElementById('addBatchBtn').addEventListener('click', ()=>{ openAddBatchModal(); });
+
+document.getElementById('modal_batch_confirm').addEventListener('click', ()=>{ const q=parseInt(document.getElementById('modal_batch_qty').value); if(isNaN(q)||q<=0){ alert('Podaj poprawną ilość'); return; } const prod=products.find(p=>p.barcode===currentBarcode); if(!prod){ closeAddBatchModal(); return; } const totalBefore=productTotal(prod); const codeFromScan = (lastScannedCode && lastScannedCode.trim()) || document.getElementById('scanInput').value.trim(); prod.parties.push({ expiry: currentDateISO(), qty: q, code: codeFromScan || prod.barcode }); const totalAfter = productTotal(prod); const entry = buildHistoryEntry(prod.name, totalBefore, totalAfter, [{qty:q, expiry: currentDateISO()}]); history.unshift(entry); if(history.length>1000) history.length=1000; localStorage.setItem('history', JSON.stringify(history)); saveProductsToStorage(); closeAddBatchModal(); renderHistory(); renderAll(); focusModeInput(); });
+
+document.getElementById('modal_batch_cancel').addEventListener('click', ()=>{ closeAddBatchModal(); focusModeInput(); });
+
+// All products panel
+function openAllProductsPanel(){ const box=document.getElementById('allProductsBoxFull'); const content=document.getElementById('allProductsBoxContent'); content.innerHTML=''; const header=document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; const h=document.createElement('h4'); h.textContent='Wszystkie produkty'; header.appendChild(h); content.appendChild(header);
+
+  const searchWrap=document.createElement('div'); searchWrap.id='allProductsSearchWrap'; searchWrap.innerHTML = `<div id="allSearchDropdown" style="position:relative;width:100%;display:flex;justify-content:center;"><input id="allProductsSearch" placeholder="Szukaj po nazwie lub kodzie kreskowym" /><div id="allProductsListDropdown" style="position:absolute;top:36px;background:#fff;border:1px solid #ccc;max-height:240px;overflow:auto;display:none;border-radius:6px;z-index:2000;width:50%;"></div></div><div style="margin-left:8px;"><button id="allProductsSearchBtn" class="btn btn-sm btn-primary">Szukaj</button></div>`; content.appendChild(searchWrap);
+  const table=document.createElement('table'); table.className='products-table'; const thead=document.createElement('thead'); thead.innerHTML='<tr><th>#</th><th>Nazwa</th><th>Ilość</th><th>Regał</th><th>Kod kreskowy</th><th>Akcje</th></tr>'; table.appendChild(thead); const tbody=document.createElement('tbody');
+
+  function renderProductsTable(filter){ tbody.innerHTML=''; products.sort((a,b)=>(a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase())); products.forEach((p,idx)=>{ if(filter){ const token=filter.toLowerCase(); if(!((p.name||'').toLowerCase().includes(token) || (p.barcode||'').toLowerCase().includes(token))) return; } const tr=document.createElement('tr'); const num=document.createElement('td'); num.textContent=idx+1; const nameTd=document.createElement('td'); const nameIn=document.createElement('input'); nameIn.value=p.name||''; nameIn.addEventListener('change',()=>{ p.name=nameIn.value.trim(); saveProductsToStorage(); renderProductsTable(filter); }); nameTd.appendChild(nameIn); const qtyTd=document.createElement('td'); qtyTd.textContent = productTotal(p); const shelfTd=document.createElement('td'); const shelfIn=document.createElement('input'); shelfIn.value=p.shelf||''; shelfIn.addEventListener('change',()=>{ p.shelf=shelfIn.value.trim(); saveProductsToStorage(); }); shelfTd.appendChild(shelfIn); const codeTd=document.createElement('td'); const codeIn=document.createElement('input'); codeIn.value=p.barcode||''; codeIn.addEventListener('change',()=>{ const newCode=codeIn.value.trim(); if(newCode!==p.barcode && products.find(pp=>pp.barcode===newCode)){ alert('Kod już używany'); codeIn.value=p.barcode; return; } p.barcode=newCode; saveProductsToStorage(); }); codeTd.appendChild(codeIn); const actionsTd=document.createElement('td'); const del=document.createElement('button'); del.className='btn btn-sm btn-danger action-btn'; del.textContent='Usuń'; del.addEventListener('click',()=>{ if(confirm('Usuń produkt?')){ lastAction={type:'delete',product:JSON.parse(JSON.stringify(p))}; products.splice(products.indexOf(p),1); saveProductsToStorage(); renderProductsTable(filter); updateLists(); renderAll(); alert('Produkt usunięty. Możesz użyć "Cofnij" aby przywrócić ostatnią operację.'); } }); // open button: DO NOT NAVIGATE AWAY; instead highlight row and keep panel open
+    const openBtn=document.createElement('button'); openBtn.className='btn btn-sm btn-secondary action-btn'; openBtn.textContent='Pokaż'; openBtn.addEventListener('click',()=>{ // filter to this product but remain in panel
+      renderProductsTable(p.barcode);
+      // highlight first row
+      setTimeout(()=>{ const r=tbody.querySelector('tr'); if(r){ r.classList.add('highlight-row'); setTimeout(()=>{ r.classList.remove('highlight-row'); },1400); } },50);
+    }); actionsTd.appendChild(openBtn); actionsTd.appendChild(del);
+    tr.appendChild(num); tr.appendChild(nameTd); tr.appendChild(qtyTd); tr.appendChild(shelfTd); tr.appendChild(codeTd); tr.appendChild(actionsTd); tbody.appendChild(tr); }); }
+  table.appendChild(tbody); content.appendChild(table); renderProductsTable();
+
+  // paste area order: NAZWA;ILOŚĆ;REGAŁ;KOD
+  const pasteWrapper=document.createElement('div'); pasteWrapper.style.marginTop='10px'; pasteWrapper.style.marginBottom='10px'; pasteWrapper.innerHTML = `<div style="display:flex;gap:8px;align-items:flex-start;"><textarea id="pasteArea" placeholder="Wklej: NAZWA;ILOŚĆ;REGAŁ;KOD" rows="3" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;"></textarea><div style="display:flex;flex-direction:column;gap:8px;"><button id="pasteAddBtn" class="btn btn-primary">Wklej i dodaj</button></div></div>`; content.appendChild(pasteWrapper);
+  pasteWrapper.querySelector('#pasteAddBtn').addEventListener('click', ()=>{ const text=(document.getElementById('pasteArea').value||'').trim(); if(!text){ alert('Brak danych do wklejenia'); return; } const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length); let added=0; lines.forEach(line=>{ const cols=line.split(/[;\t,]/).map(c=>c.trim()); if(cols.length>=2){ const name=cols[0]||''; const qty=parseInt(cols[1])||0; const shelf=cols[2]||''; const code=cols[3]||('BC'+Date.now()+Math.random()); const parties = qty>0 ? [{ expiry: currentDateISO(), qty: qty, code: code }] : []; products.push({ name:name, shelf:shelf, barcode:code, parties:parties }); added++; } }); if(added>0){ saveProductsToStorage(); renderProductsTable(); alert('Dodano '+added+' produktów z wklejenia.'); document.getElementById('pasteArea').value=''; updateLists(); } });
+
+  // search dropdown
+  const allDropdown=document.getElementById('allProductsListDropdown'); const allInput=document.getElementById('allProductsSearch'); function populateAllDropdown(val){ const v=(val||'').trim().toLowerCase(); allDropdown.innerHTML=''; if(!v){ allDropdown.style.display='none'; return; } const matches = products.filter(p=> (p.name||'').toLowerCase().includes(v) || (p.barcode||'').toLowerCase().includes(v)); matches.slice(0,60).forEach(p=>{ const div=document.createElement('div'); div.style.padding='8px'; div.style.cursor='pointer'; div.textContent = `${p.name}`; div.addEventListener('click', ()=>{ // instead of closing panel, filter table to that product
+      renderProductsTable(p.barcode); allDropdown.style.display='none'; focusModeInput(); }); allDropdown.appendChild(div); }); allDropdown.style.display = matches.length ? 'block' : 'none'; }
+  allInput.addEventListener('input', (e)=>{ populateAllDropdown(e.target.value); });
+  allInput.addEventListener('keypress', (e)=>{ if(e.key==='Enter'){ const v=allInput.value.trim(); if(!v) return; const prod = products.find(p=>p.barcode===v || (p.name||'').toLowerCase()===v.toLowerCase()); if(prod){ renderProductsTable(prod.barcode); focusModeInput(); } else { renderProductsTable(v); } allDropdown.style.display='none'; } });
+  document.getElementById('allProductsSearchBtn').addEventListener('click', ()=>{ renderProductsTable(allInput.value.trim()||null); allDropdown.style.display='none'; });
+  
+  // update total count box
+  const totalQty = products.reduce((s,p)=>s+productTotal(p),0);
+  const boxTotal = document.getElementById('totalAllQty');
+  if(boxTotal) boxTotal.textContent = totalQty;
+  const totalProdQty = products
+    .filter(p => !(p.name || '').trim().endsWith('.'))
+    .reduce((s, p) => s + productTotal(p), 0);
+  
+  
+  const totalZaprawyQty = products
+    .filter(p => (p.name||'').toLowerCase().includes('(zaprawy'))
+    .reduce((s,p)=>s+productTotal(p),0);
+  
+// LICZENIE ZAPRAW Z WYBRANEGO ROKU
+const yearLabel = document.getElementById('yearZaprawBoxLabel').value;
+const matchYear = yearLabel.match(/\d{4}/);
+let selectedYear = matchYear ? parseInt(matchYear[0]) : null;
+
+if (selectedYear) {
+    let sumForYear = 0;
+    products.forEach(p => {
+        if ((p.name || '').toLowerCase().includes('(zaprawy')) {
+            if (Array.isArray(p.parties)) {
+                p.parties.forEach(pt => {
+                    if (!pt.expiry) return;
+                    const y = parseInt(pt.expiry.split('-')[0]);
+                    if (y === selectedYear) {
+                        sumForYear += (parseInt(pt.qty) || 0);
+                    }
+                });
+            }
+        }
+    });
+    document.getElementById('yearZaprawQty').textContent = sumForYear;
+}
+const boxZap = document.getElementById('totalZaprawyQty');
+  if(boxZap) boxZap.textContent = totalZaprawyQty;
+
+  const totalSpicesQty = products
+    .filter(p => (p.name || '').trim().endsWith('.'))
+    .reduce((s, p) => s + productTotal(p), 0);
+  const boxSp = document.getElementById('totalSpicesQty');
+  if(boxSp) boxSp.textContent = totalSpicesQty;
+
+  const boxProd = document.getElementById('totalProductsQty');
+  if(boxProd) boxProd.textContent = totalProdQty;
+
+
+  box.style.display='block'; }
+
+document.getElementById('showAllBtn').addEventListener('click', openAllProductsPanel);
+document.getElementById('closeAllProducts').addEventListener('click',()=>{ document.getElementById('allProductsBoxFull').style.display='none'; focusModeInput(); });
+document.getElementById('undoAllProducts').addEventListener('click',()=>{ if(!lastAction){ alert('Brak działania do cofnięcia'); return; } if(lastAction.type==='delete' && lastAction.product){ products.push(lastAction.product); lastAction=null; saveProductsToStorage(); alert('Przywrócono ostatnio usunięty produkt.'); document.getElementById('allProductsBoxContent') && openAllProductsPanel(); updateLists(); renderAll(); renderHistory(); } else { alert('Nie można cofnąć tej operacji.'); } });
+
+// Scan & mode logic with 222222 behavior
+const modeInput=document.getElementById('modeInput'); const scanInput=document.getElementById('scanInput'); modeInput.focus(); modeInput.addEventListener('input', ()=>{ const val=modeInput.value.trim(); if(['333333','111111','222222'].includes(val)){ scanInput.dataset.manual='false'; scanInput.focus(); modeInput.dataset.mode=val; modeInput.value=''; } });
+
+function formatISOFromDMY(d,m,y){ const dd=String(d).padStart(2,'0'); const mm=String(m).padStart(2,'0'); const yyyy=String(y); return `${yyyy}-${mm}-${dd}`; }
+
+function openScanDateModalForBarcode(bc, prefill){ pendingScanBarcode = bc; overlayModal.style.display='block'; scanDateModal.style.display='block'; if(prefill){ const parts = prefill.split('-'); document.getElementById('scan_day').value = parts[2]||''; document.getElementById('scan_month').value = parts[1]||''; document.getElementById('scan_year').value = parts[0]||''; } else { document.getElementById('scan_day').value=''; document.getElementById('scan_month').value=''; document.getElementById('scan_year').value=''; } setTimeout(()=>{ document.getElementById('scan_day').focus(); },50); }
+function closeScanDateModal(){ overlayModal.style.display='none'; scanDateModal.style.display='none'; pendingScanBarcode=null; }
+
+function openScanConfirmModal(text){ document.getElementById('scanConfirmText').textContent = text; overlayModal.style.display='block'; scanConfirmModal.style.display='block'; }
+function closeScanConfirmModal(){ overlayModal.style.display='none'; scanConfirmModal.style.display='none'; }
+
+// Confirm modal handlers
+document.getElementById('scanConfirmYes').addEventListener('click', ()=>{ // add 1 to lastScannedDate for pendingScanBarcode
+  const bc = pendingScanBarcode; const stored = lastScannedDate[bc]; if(!stored){ closeScanConfirmModal(); return; } const prod = products.find(p=>p.barcode===bc); if(!prod){ closeScanConfirmModal(); return; } // find party with that expiry
+  let party = prod.parties.find(pt=>pt.expiry===stored);
+  if(party){ party.qty = (parseInt(party.qty)||0)+1; } else { prod.parties.push({ expiry: stored, qty: 1, code: bc });
+      prod.parties.sort((a,b)=>new Date(a.expiry)-new Date(b.expiry)); }
+  const totalBefore = productTotal(prod)-1; const totalAfter = productTotal(prod); const entry = buildHistoryEntry(prod.name, totalBefore, totalAfter, [{qty:1, expiry: stored}]); history.unshift(entry); if(history.length>1000) history.length=1000; localStorage.setItem('history', JSON.stringify(history)); saveProductsToStorage(); closeScanConfirmModal(); saveLastScanned(); renderHistory(); renderAll(); pendingScanBarcode = bc; focusModeInput(); });
+
+document.getElementById('scanConfirmNo').addEventListener('click', ()=>{ closeScanConfirmModal(); openScanDateModalForBarcode(pendingScanBarcode, null); });
+
+// scan date modal actions
+document.getElementById('scan_confirm').addEventListener('click', ()=>{ const d=document.getElementById('scan_day').value.trim(); const m=document.getElementById('scan_month').value.trim(); const y=document.getElementById('scan_year').value.trim(); if(!d||!m||!y){ alert('Wprowadź dzień, miesiąc i rok'); return; } const iso = formatISOFromDMY(d,m,y); const bc = pendingScanBarcode; const prod = products.find(p=>p.barcode===bc);
+  if(!prod){ // product not found, open add product modal prefilled
+    closeScanDateModal(); openAddProductModal(bc); return; }
+  // add 1 to this expiry (or create if doesn't exist)
+  let party = prod.parties.find(pt=>pt.expiry===iso);
+  if(party){ party.qty = (parseInt(party.qty)||0)+1; } else { prod.parties.push({ expiry: iso, qty: 1, code: bc });
+      prod.parties.sort((a,b)=>new Date(a.expiry)-new Date(b.expiry)); }
+  // remember this date for this barcode
+  lastScannedDate[bc] = iso; saveLastScanned();
+  const totalAfter = productTotal(prod); const totalBefore = totalAfter - 1; const entry = buildHistoryEntry(prod.name, totalBefore, totalAfter, [{qty:1, expiry: iso}]); history.unshift(entry); if(history.length>1000) history.length=1000; localStorage.setItem('history', JSON.stringify(history)); saveProductsToStorage(); closeScanDateModal(); renderHistory(); renderAll(); focusModeInput(); });
+
+document.getElementById('scan_cancel').addEventListener('click', ()=>{ closeScanDateModal(); focusModeInput(); });
+
+// Main search dropdown behavior (like AllProducts)
+scanInput.addEventListener('input', ()=>{
+  const val = scanInput.value.trim().toLowerCase();
+  const dd = document.getElementById('searchDropdown');
+  if(!val){ dd.style.display='none'; return; }
+  if(scanInput.dataset.manual==='true' && !['111111','222222','333333'].includes(modeInput.dataset.mode)){
+    dd.innerHTML='';
+    const matches = products.filter(p=> (p.name||'').toLowerCase().includes(val) || (p.barcode||'').toLowerCase().includes(val));
+    matches.slice(0,50).forEach((p,idx)=>{ const div=document.createElement('div'); if(idx===0) div.classList.add('selected');
+      div.textContent = `${p.name}`;
+      div.addEventListener('click',()=>{
+        // load product directly into main page (like scanning)
+        currentBarcode = p.barcode; takeEditSnapshot(); renderAll();
+        dd.style.display='none'; scanInput.value=''; focusModeInput();
+      });
+      dd.appendChild(div);
+    });
+    dd.style.display=matches.length? 'block':'none';
+  }
+});
+
+
+// Keyboard navigation for searchDropdown (ArrowUp/ArrowDown + Enter)
+scanInput.addEventListener('keydown', (e) => {
+  const dd = document.getElementById('searchDropdown');
+  if(dd.style.display==='none') return;
+  const items = Array.from(dd.querySelectorAll('div'));
+  if(!items.length) return;
+  let idx = items.findIndex(it=>it.classList.contains('selected'));
+  if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    if(idx < items.length-1){
+      if(idx>=0) items[idx].classList.remove('selected');
+      items[idx+1].classList.add('selected');
+    } else {
+      if(idx>=0) items[idx].classList.remove('selected');
+      items[0].classList.add('selected');
+    }
+    items.find(it=>it.classList.contains('selected')).scrollIntoView({block:'nearest'});
+  } else if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    if(idx > 0){
+      items[idx].classList.remove('selected');
+      items[idx-1].classList.add('selected');
+    } else {
+      if(idx>=0) items[idx].classList.remove('selected');
+      items[items.length-1].classList.add('selected');
+    }
+    items.find(it=>it.classList.contains('selected')).scrollIntoView({block:'nearest'});
+  } else if(e.key === 'Enter'){
+    const sel = items.find(it=>it.classList.contains('selected'));
+    if(sel){
+      e.preventDefault();
+      sel.click();
+    }
+  }
+});
+
+scanInput.addEventListener('focus',()=>{ scanInput.dataset.manual='true'; });
+scanInput.addEventListener('blur',()=>{ setTimeout(()=>{document.getElementById('searchDropdown').style.display='none'},200); });
+
+scanInput.addEventListener('keypress',e=>{
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const val=scanInput.value.trim();
+    if(!val){ scanInput.value=''; scanInput.focus(); return;}
+    lastScannedCode = val;
+    const prod = products.find(p=>p.barcode===val || (p.name||'').toLowerCase()===val.toLowerCase() || (p.parties||[]).some(pt=>pt.code===val));
+    if(!prod){
+      // product not found -> open empty add product modal (same as manual)
+      openAddProductModal(val);
+      scanInput.value='';
+      return;
+    }
+    const modeVal=modeInput.dataset.mode;
+    if(modeVal==='111111'){
+      currentBarcode = prod.barcode;
+      takeEditSnapshot();
+
+      // REMOVE 1 — FIFO, ALE TYLKO DLA PARTII ZE ZESKANOWANYM KODEM
+      let remaining = 1;
+      const scannedCode = val; // zeskanowany kod
+      const totalBefore = productTotal(prod);
+      let logEntries = [];
+
+      // WYBIERAMY TYLKO PARTIE Z TYM KODEM
+      let allowedParties = prod.parties.filter(pt => pt.code === scannedCode);
+
+      if (allowedParties.length === 0) {
+          alert("Brak partii dla tego kodu!");
+      } else {
+          // sortujemy tylko wybrane partie po dacie
+          allowedParties.sort((a,b)=>new Date(a.expiry)-new Date(b.expiry));
+
+          for (let pt of allowedParties) {
+              if (remaining <= 0) break;
+              if (pt.qty > 0) {
+                  let sub = Math.min(pt.qty, remaining);
+                  pt.qty -= sub;
+                  remaining -= sub;
+                  logEntries.push({ qty: sub, expiry: pt.expiry || '' });
+              }
+          }
+
+          const totalAfter = productTotal(prod);
+          const entry = buildHistoryEntry(prod.name, totalBefore, totalAfter, logEntries);
+          history.unshift(entry);
+          if (history.length > 1000) history.length = 1000;
+          localStorage.setItem('history', JSON.stringify(history));
+          saveProductsToStorage();
+          renderHistory();
+          renderAll();
+      }
+    } else if(modeVal==='222222'){ currentBarcode = prod.barcode;
+      // Add 1 with date logic described
+      const bc = prod.barcode;
+      pendingScanBarcode = bc;
+      const lastDate = lastScannedDate[bc];
+      if(lastDate){
+        // ask if add to lastDate
+        openScanConfirmModal(`Dodać 1 szt. do partii z datą: ${lastDate}?`);
+        // keep pendingScanBarcode set
+      } else {
+        // ask for date
+        openScanDateModalForBarcode(bc, null);
+      }
+    } else if(modeVal==='333333'){
+      currentBarcode = prod.barcode;
+      takeEditSnapshot();
+      renderAll();
+    } else {
+      currentBarcode = prod.barcode;
+      takeEditSnapshot();
+      renderAll();
+    }
+    scanInput.value='';
+    focusModeInput();
+  }
+});
+
+// Simple focus helper
+function focusModeInput(){ const modeInput = document.getElementById('modeInput'); modeInput.focus(); modeInput.select(); }
+
+// Login logic
+const loginOverlay = document.getElementById('loginOverlay');
+const loginInput = document.getElementById('loginInput');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+
+function showLoginIfNeeded(){
+  const logged = sessionStorage.getItem('mag_logged');
+  if(logged==='1'){
+    loginOverlay.style.display='none';
+  } else {
+    loginOverlay.style.display='flex';
+    setTimeout(()=>{ loginInput.focus(); },50);
+  }
+}
+
+loginBtn.addEventListener('click', ()=>{
+  const val = loginInput.value.trim();
+  if(val===LOGIN_PASSWORD){ sessionStorage.setItem('mag_logged','1'); loginOverlay.style.display='none'; loginInput.value=''; focusModeInput(); }
+  else { alert('Błędne hasło'); loginInput.value=''; loginInput.focus(); }
+});
+loginInput.addEventListener('keypress',(e)=>{ if(e.key==='Enter'){ loginBtn.click(); } });
+logoutBtn.addEventListener('click', ()=>{ sessionStorage.removeItem('mag_logged'); showLoginIfNeeded(); });
+showLoginIfNeeded();
+
+// Initial render
+renderHistory();
+takeEditSnapshot();
+renderAll();
+
+// Periodic refresh
+setInterval(()=>{ renderAll(); },60000);
+
+
+// Fix go home button
+document.getElementById('goHomeBtn').addEventListener('click', ()=>{
+  document.getElementById('allProductsBoxFull').style.display='none';
+  currentBarcode=null;
+  document.getElementById('fieldName').value='';
+  document.getElementById('fieldShelf').value='';
+  document.getElementById('fieldBarcode').value='';
+  document.getElementById('fieldTotal').innerText='0';
+  document.querySelector('#partiesTable tbody').innerHTML='<tr><td colspan="5">Brak partii</td></tr>';
+  focusModeInput();
+});
+
+// Auto jump for date inputs
+function autoJumpDateInputs(dayEl, monthEl, yearEl, confirmBtn){
+  // Enforce numeric-only and only jump after 2-2-4 digits (day-month-year)
+  const fields = [dayEl, monthEl, yearEl];
+  fields.forEach((el, idx)=>{
+    el.addEventListener('input', ()=>{
+      // keep only digits
+      let v = (el.value||'').replace(/\D/g,'');
+      el.value = v;
+      if(idx===0 && v.length>=2){ monthEl.focus(); }
+      else if(idx===1 && v.length>=2){ yearEl.focus(); }
+      else if(idx===2 && v.length>=4 && confirmBtn){ confirmBtn.click(); }
+    });
+    // prevent Enter from prematurely submitting the modal
+    el.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); const v=(el.value||'').replace(/\D/g,''); if(idx===0 && v.length<2) return; if(idx===1 && v.length<2) return; if(idx===2 && v.length<4) return; if(idx===2 && confirmBtn && v.length>=4){ confirmBtn.click(); } } });
+  });
+}
+// Hook modals after DOM load
+window.addEventListener('load', ()=>{
+  autoJumpDateInputs(
+    document.getElementById('scan_day'),
+    document.getElementById('scan_month'),
+    document.getElementById('scan_year'),
+    document.getElementById('scan_confirm')
+  );
+  autoJumpDateInputs(
+    document.getElementById('modal_day'),
+    document.getElementById('modal_month'),
+    document.getElementById('modal_year'),
+    document.getElementById('modal_add_confirm')
+  );
+});
+
+
+// Auto-jump DD -> MM -> RRRR for expiry segments
+document.addEventListener('input', function(e){
+  if(e.target.classList.contains('expirySegment')){
+    let v = e.target.value.replace(/\D/g,'');
+    e.target.value = v;
+
+    if(e.target.classList.contains('exp_day') && v.length==2){
+        e.target.closest('td').querySelector('.exp_month').focus();
+    }
+    if(e.target.classList.contains('exp_month') && v.length==2){
+        e.target.closest('td').querySelector('.exp_year').focus();
+    }
+    if(e.target.classList.contains('exp_year') && v.length==4){
+        const tr = e.target.closest('tr');
+        const day = tr.querySelector('.exp_day').value.padStart(2,'0');
+        const month = tr.querySelector('.exp_month').value.padStart(2,'0');
+        const year = tr.querySelector('.exp_year').value.padStart(4,'0');
+        const iso = `${year}-${month}-${day}`;
+        const idx = parseInt(e.target.dataset.idx);
+        const prod = products.find(p=>p.barcode===currentBarcode);
+        if(prod && prod.parties[idx]){
+            prod.parties[idx].expiry = iso;
+        }
+        renderAll();
+    }
+  }
+});
+
+
+// Clear date fields when clicking day field
+document.addEventListener('focusin', function(e){
+  if(e.target.classList.contains('exp_day')){
+      const td = e.target.closest('td');
+      if(td){
+          const d = td.querySelector('.exp_day');
+          const m = td.querySelector('.exp_month');
+          const y = td.querySelector('.exp_year');
+          if(d) d.value = '';
+          if(m) m.value = '';
+          if(y) y.value = '';
+      }
+  }
+});
+
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<!-- Sorted Products Panel -->
+<div aria-hidden="true" id="sortedProductsBoxFull" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#f3fff6;z-index:10000;overflow:auto;padding:20px;box-sizing:border-box;">
+<button id="closeSortedProducts" style="position:absolute;top:10px;right:20px;font-size:20px;cursor:pointer;background:#eee;border:none;padding:6px 10px;border-radius:4px;">× Zamknij</button>
+<div style="position:absolute;top:10px;right:180px;display:flex;gap:8px;">
+  <button class="btn btn-primary btn-sm-wide" id="printShoppingBtn">Drukuj listę zakupów</button>
+  <button class="btn btn-sm" id="sortProduktyBtn" style="background:#007bff;color:#fff;padding:6px 8px;border-radius:4px;border:none;">SORT PRODUKTY</button>
+  <button class="btn btn-sm" id="sortPrzyprawyBtn" style="background:#ffc107;color:#000;padding:6px 8px;border-radius:4px;border:none;">SORT PRZYPRAWY</button>
+</div>
+<div style="margin-top:40px;">
+<h3 style="margin-top:0;color:#0f9d58;">Posortowane produkty od 1 szt.</h3>
+<table class="products-table" id="sortedProductsTable" style="width:100%;">
+<thead><tr><th>#</th><th>Nazwa</th><th>Wybierz<br><input id="autoSelectQty" style="width:40px" placeholder="1"></th><th>Ilość</th><th>Regał</th><th>Kod kreskowy</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+<script>
+
+
+function openSortedProductsPanel(){
+  const box=document.getElementById('sortedProductsBoxFull');
+  const tbody=document.querySelector('#sortedProductsTable tbody');
+  tbody.innerHTML='';
+  const prods=products.slice().sort((a,b)=>productTotal(a)-productTotal(b));
+  let i=0;
+  prods.forEach(p=>{
+    i++;
+    const qty=productTotal(p);
+    const tr=document.createElement('tr');
+    let bg='';
+    if(qty===0) bg='background:#ffecec';
+    else if(qty===1) bg='background:#fff3e0';
+    else if(qty===2) bg='background:#fffde7';
+    else if(qty===3) bg='background:#e8f4ff';
+    else bg='background:#e8f7ee';
+    tr.style=bg;
+    tr.innerHTML=`<td>${i}</td><td>${p.name}</td><td><input type="checkbox" class="buyCheck" data-name="${p.name}" data-qty="${qty}"></td><td>${qty}</td><td>${p.shelf}</td><td>${p.barcode}</td>`;
+    tbody.appendChild(tr);
+  });
+  
+  // update total count box
+  const totalQty = products.reduce((s,p)=>s+productTotal(p),0);
+  const boxTotal = document.getElementById('totalAllQty');
+  if(boxTotal) boxTotal.textContent = totalQty;
+  const totalProdQty = products
+    .filter(p => !(p.name || '').trim().endsWith('.'))
+    .reduce((s, p) => s + productTotal(p), 0);
+  const boxProd = document.getElementById('totalProductsQty');
+  if(boxProd) boxProd.textContent = totalProdQty;
+
+
+  box.style.display='block';
+  document.getElementById('closeSortedProducts').onclick=()=>{box.style.display='none'};
+}
+
+document.getElementById('showSortedBtn').addEventListener('click',openSortedProductsPanel);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<!-- NEW MODALS: Produkty do druku & Przyprawy do druku -->
+<div style="border:1px solid #e3e6ea;border-radius:6px;padding:8px;background:#fff;">
+<table class="products-table" id="produktyPrintTable_modal" style="width:100%;margin-top:6px;">
+<thead><tr><th>Nazwa</th><th>Kod kreskowy</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+<div style="border:1px solid #e3e6ea;border-radius:6px;padding:8px;background:#fff;">
+<table class="products-table" id="przyprawyPrintTable_modal" style="width:100%;margin-top:6px;">
+<thead><tr><th>Nazwa</th><th>Kod kreskowy</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+<script>
+// Wiring: populate modal tables from existing storage and reuse pdf generation
+function fillModalPrintTables(){
+  try{
+    const arr = JSON.parse(localStorage.getItem('products')||'[]');
+    const pBody = document.querySelector('#produktyPrintTable_modal tbody');
+    const sBody = document.querySelector('#przyprawyPrintTable_modal tbody');
+    if(!pBody || !sBody) return;
+    pBody.innerHTML = '';
+    sBody.innerHTML = '';
+    arr.forEach(p=>{
+      const name = p.name || '';
+      const code = p.barcode || '';
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+escapeHtml(name)+'</td><td>'+escapeHtml(code)+'</td>';
+      if(name.trim().endsWith('.')) sBody.appendChild(tr); else pBody.appendChild(tr);
+    });
+  }catch(e){ console.error(e); }
+}
+
+// Hook the open buttons
+);
+// If modal open button for przyprawy exists
+);
+
+// Reuse existing PDF generation code: trigger existing handlers by forwarding clicks
+document.getElementById('downloadProductsPdf_modal') && document.getElementById('downloadProductsPdf_modal').addEventListener('click', function(){
+  // Trigger the existing handler by filling the original tables and calling build logic
+  try{
+    // populate the non-modal tables (if present)
+    if(typeof fillTopPrintTables === 'function') fillTopPrintTables();
+  }catch(e){}
+  // Build rows from modal table and call buildAndDownloadPDF if available
+  const rows = Array.from(document.querySelectorAll('#produktyPrintTable_modal tbody tr')).map(tr=>[tr.cells[0].innerText.trim(), tr.cells[1].innerText.trim()]);
+  if(typeof buildAndDownloadPDF === 'function') buildAndDownloadPDF('ZAPASY_W_SPIŻARNI_PRODUKTY', rows);
+});
+
+document.getElementById('downloadSpicesPdf_modal') && document.getElementById('downloadSpicesPdf_modal').addEventListener('click', function(){
+  try{
+    if(typeof fillTopPrintTables === 'function') fillTopPrintTables();
+  }catch(e){}
+  const rows = Array.from(document.querySelectorAll('#przyprawyPrintTable_modal tbody tr')).map(tr=>[tr.cells[0].innerText.trim(), tr.cells[1].innerText.trim()]);
+  if(typeof buildAndDownloadPDF === 'function') buildAndDownloadPDF('ZAPASY_W_SPIŻARNI_PRZYPRAWY', rows);
+});
+
+// Also connect the original modal buttons (if original ids exist)
+document.getElementById('downloadProductsPdf') && document.getElementById('downloadProductsPdf').addEventListener('click', function(){
+  fillModalPrintTables();
+  const rows = Array.from(document.querySelectorAll('#produktyPrintTable tbody tr')).map(tr=>[tr.cells[0].innerText.trim(), tr.cells[1].innerText.trim()]);
+  if(typeof buildAndDownloadPDF === 'function') buildAndDownloadPDF('ZAPASY_W_SPIŻARNI_PRODUKTY', rows);
+});
+document.getElementById('downloadSpicesPdf') && document.getElementById('downloadSpicesPdf').addEventListener('click', function(){
+  fillModalPrintTables();
+  const rows = Array.from(document.querySelectorAll('#przyprawyPrintTable tbody tr')).map(tr=>[tr.cells[0].innerText.trim(), tr.cells[1].innerText.trim()]);
+  if(typeof buildAndDownloadPDF === 'function') buildAndDownloadPDF('ZAPASY_W_SPIŻARNI_PRZYPRAWY', rows);
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<!-- END NEW MODALS -->
+<!-- SORT PRODUKTY PANEL -->
+<div id="sortProduktyPanel" style="display:none;position:fixed;inset:0;background:#ffffff;z-index:11000;overflow:auto;padding:20px;">
+<button class="no-print" id="printSortProduktyBtn" style="margin:10px;background:#0f9d58;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;">DRUKUJ</button>
+<button onclick="document.getElementById('sortProduktyPanel').style.display='none'" style="position:absolute;top:10px;right:20px;background:#eee;border:none;padding:6px 10px;border-radius:4px;font-size:20px;">× Zamknij</button>
+<h2 style="text-align:center;margin-top:0;">ZAPASY W SPIŻARNI</h2><div style="display:flex;justify-content:center;">
+<table class="products-table" id="sortProduktyTable" style="width:100%;background:#fff;">
+<thead><tr><th colspan="2" style="text-align:center;font-size:1.6rem;font-weight:900;">ZAPASY W SPIŻARNI</th></tr><tr><th style="width:50%;">PRODUKTY</th><th style="width:50%;">Kod kreskowy</th></tr></thead><tbody></tbody>
+</table></div>
+</div>
+<!-- SORT PRZYPRAWY PANEL -->
+<div id="sortPrzyprawyPanel" style="display:none;position:fixed;inset:0;background:#ffffff;z-index:11000;overflow:auto;padding:20px;">
+<button class="no-print" id="printSortPrzyprawyBtn" style="margin:10px;background:#0f9d58;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;">DRUKUJ</button>
+<button onclick="document.getElementById('sortPrzyprawyPanel').style.display='none'" style="position:absolute;top:10px;right:20px;background:#eee;border:none;padding:6px 10px;border-radius:4px;font-size:20px;">× Zamknij</button><h2 style="text-align:center;margin-top:0;">ZAPASY W SPIŻARNI</h2><div style="display:flex;justify-content:center;"><table class="products-table" id="sortPrzyprawyTable" style="width:100%;background:#fff;">
+<thead><tr><th colspan="2" style="text-align:center;font-size:1.6rem;font-weight:900;">ZAPASY W SPIŻARNI</th></tr><tr><th style="width:50%;">PRZYPRAWY</th><th style="width:50%;">Kod kreskowy</th></tr></thead><tbody></tbody>
+</table>
+</div>
+<script>
+document.getElementById('sortProduktyBtn').onclick=function(){
+  const panel=document.getElementById('sortProduktyPanel');
+  const tbody=panel.querySelector('tbody');
+  tbody.innerHTML='';
+  const arr=JSON.parse(localStorage.getItem('products')||'[]');
+  const list=arr.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  list.forEach(p=>{
+    const name=p.name||'';
+    if(name.trim().endsWith('.')) return;
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${name.replace(/\.$/,'')}</td><td style="text-align:center;vertical-align:middle;padding:8px;">
+  <svg class="barcode" data-barcode="${p.barcode}"></svg>
+  <div style="margin-top:6px;font-weight:700;">${p.barcode}</div>
+</td>`;
+    tbody.appendChild(tr);
+  });
+  panel.style.display='block';
+};
+document.getElementById('sortPrzyprawyBtn').onclick=function(){
+  const panel=document.getElementById('sortPrzyprawyPanel');
+  const tbody=panel.querySelector('tbody');
+  tbody.innerHTML='';
+  const arr=JSON.parse(localStorage.getItem('products')||'[]');
+  const list=arr.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  list.forEach(p=>{
+    const name=p.name||'';
+    if(!name.trim().endsWith('.')) return;
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${name}</td><td style="text-align:center;vertical-align:middle;padding:8px;">
+  <svg class="barcode" data-barcode="${p.barcode}"></svg>
+  <div style="margin-top:6px;font-weight:700;">${p.barcode}</div>
+</td>`;
+    tbody.appendChild(tr);
+  });
+  panel.style.display='block';
+};
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js">
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script>
+// Helper: when SORT PRODUKTY / SORT PRZYPRAWY panels are opened, render JSBarcode into svg[data-barcode]
+function renderSortBarcodes(container){
+  try{
+    const svgs = (container||document).querySelectorAll('svg.barcode');
+    svgs.forEach(s=>{
+      const val = s.dataset.barcode || s.getAttribute('data-barcode') || '';
+      if(val && s.childElementCount===0){
+        JsBarcode(s, String(val), {format:'CODE128', displayValue:false, height:48, margin:6, background:'#fff'});
+      }
+    });
+  }catch(e){ console.error('Barcode render error', e); }
+}
+// Observe mutations to render newly-added SVGs
+const sortedProdPanel = document.getElementById('sortProduktyPanel');
+const sortedPrzPanel = document.getElementById('sortPrzyprawyPanel');
+[sortedProdPanel, sortedPrzPanel].forEach(panel=>{
+  if(!panel) return;
+  const obs = new MutationObserver(()=>{ renderSortBarcodes(panel); });
+  obs.observe(panel, {childList:true, subtree:true, attributes:false});
+});
+// Also render on initial page load in case panels were pre-filled
+document.addEventListener('DOMContentLoaded', ()=>{ renderSortBarcodes(sortedProdPanel); renderSortBarcodes(sortedPrzPanel); });
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script>
+function printVisibleTable(){
+  let table = null;
+  const modals = ['produktyDrukModal','przyprawyDrukModal','sortProduktyPanel'];
+  for(const id of modals){
+    const el = document.getElementById(id);
+    if(el && el.style.display !== 'none'){
+      table = el.querySelector('table');
+      if(table) break;
+    }
+  }
+  if(!table){ alert('Brak tabeli do druku!'); return; }
+  const w = window.open('', '_blank');
+  w.document.write('<html><head><title>Druk</title>');
+  w.document.write('<style>table{width:100%;border-collapse:collapse;}td, th { border: 1px solid #000; padding: 0.5px; font-size: 7px; line-height: 0.6; text-align: center; }@page{margin:10mm;}</style>');
+  w.document.write('
+<style>
+.container-full{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+#allProductsBoxFull{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+.main-grid{
+    background:#cce7ff !important;
+    padding:12px !important;
+    border-radius:12px;
+}
+</style>
+
+
+<style>
+.left-panel{
+    background:transparent !important;
+}
+</style>
+
+</head><body>');
+  w.document.write(table.outerHTML);
+  w.document.write('
+<script>
+
+
+
+
+function printTableById(tableId){
+  const table = document.getElementById(tableId);
+  if (!table) { alert("Brak tabeli do druku!"); return; }
+
+  const rows = Array.from(table.querySelectorAll("tbody tr"));
+  const header = table.querySelector("thead")?.innerHTML || "";
+  if (!rows.length) { alert("Brak danych do druku!"); return; }
+
+  const firstChunk = rows.slice(0, 19);
+  const otherChunks = [];
+  for (let i = 19; i < rows.length; i += 20) {
+    otherChunks.push(rows.slice(i, i + 20));
+  }
+
+  let output = `<html><head><title>Druk</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 0; }
+    td, th { border: 1px solid #000; padding: 1px; font-size: 8px; line-height: 0.8; text-align: center; }
+    h2 { text-align: center; margin-bottom: 4px; font-size: 14px; }
+    @page { size: A4 portrait; margin: 5mm; }
+  </style>
+  
+<style>
+.container-full{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+#allProductsBoxFull{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+.main-grid{
+    background:#cce7ff !important;
+    padding:12px !important;
+    border-radius:12px;
+}
+</style>
+
+
+<style>
+.left-panel{
+    background:transparent !important;
+}
+</style>
+
+</head><body>`;
+
+  output += `<h2>ZAPASY W SPIŻARNI</h2>`;
+  output += `<table><thead>${header}</thead><tbody>`;
+  firstChunk.forEach(tr => output += tr.outerHTML);
+  output += `</tbody></table>`;
+
+  otherChunks.forEach(chunk => {
+    output += `<table><tbody>`;
+    chunk.forEach(tr => output += tr.outerHTML);
+    output += `</tbody></table>`;
+  });
+
+  output += "<style>
+/* 3x bigger font for first column in Sort Produkty and Sort Przyprawy */
+#sortProduktyTable td:first-child,
+#sortPrzyprawyTable td:first-child {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Increase headers in SORT tables */
+#sortProduktyTable th,
+#sortPrzyprawyTable th {
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Widen Code128 barcodes and enlarge digits under them in sort windows */
+#sortProduktyTable img,
+#sortPrzyprawyTable img {
+    width: 300px !important;
+}
+
+#sortProduktyTable svg text,
+#sortPrzyprawyTable svg text {
+    font-size: 2.4rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<script>
+function updateYearZapraw(){
+    try{
+        const label=document.getElementById('yearZaprawBoxLabel').value;
+        const m=label.match(/(\d{4})/);
+        if(!m)return;
+        const yr=m[1];
+        let sum=0;
+        (products||[]).forEach(p=>{
+            if((p.name||'').toLowerCase().includes('(zaprawy')){
+                (p.parties||[]).forEach(pt=>{
+                    if(pt.expiry && pt.expiry.startsWith(yr)) sum+=(parseInt(pt.qty)||0);
+                });
+            }
+        });
+        const el=document.getElementById('yearZaprawQty');
+        if(el) el.textContent=sum;
+    }catch(e){}
+}
+
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script>
+function updateYearZapraw(){
+ try{
+   const label=document.getElementById('yearZaprawBoxLabel').value||"";
+   const m=label.match(/(\d{4})/);
+   if(!m) return;
+   const yr=m[1];
+   const products = JSON.parse(localStorage.getItem("products")||"[]");
+   let sum=0;
+   products.forEach(p=>{
+     if((p.name||"").toLowerCase().includes("(zaprawy") && p.name.includes(yr)){
+        sum += (p.parties||[]).reduce((a,b)=>a+(parseInt(b.qty)||0),0);
+     }
+   });
+   const el=document.getElementById('yearZaprawQty');
+   if(el) el.textContent=sum;
+ }catch(e){}
+}
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+
+<script>
+function printTableById(id){
+  const t=document.getElementById(id);
+  if(!t){alert("Brak tabeli: "+id);return;}
+  const w=window.open("", "_blank");
+  w.document.write("<html><head><title>Drukuj</title><style>table{width:100%;border-collapse:collapse;} td,th{border:1px solid #000;padding:4px;text-align:center;}</style></head><body>");
+  w.document.write(t.outerHTML);
+  w.document.write("</body></html>");
+  w.document.close();
+  w.print();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const p1=document.getElementById("printSortProduktyBtn");
+  if(p1) p1.onclick=()=>printTableById("sortProduktyTable");
+  const p2=document.getElementById("printSortPrzyprawyBtn");
+  if(p2) p2.onclick=()=>printTableById("sortPrzyprawyTable");
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+</body></html>";
+
+  const printWin = window.open("", "_blank");
+  printWin.document.write(output);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(() => { printWin.print(); printWin.close(); }, 300);
+}
+const rows = Array.from(table.querySelectorAll("tbody tr"));
+  const header = table.querySelector("thead")?.innerHTML || "";
+  if (!rows.length) { alert("Brak danych do druku!"); return; }
+
+  // FIRST PAGE — 19 items
+  const firstChunk = rows.slice(0, 19);
+
+  // NEXT PAGES — 20 items each
+  const otherChunks = [];
+  for (let i = 19; i < rows.length; i += 20) {
+    otherChunks.push(rows.slice(i, i + 20));
+  }
+
+  // BUILD PRINT DOCUMENT
+  let output = `<html><head><title>Druk</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 0; padding: 0; }
+    td, th { border: 1px solid #000; padding: 2px; font-size: 9px; line-height: 1.05; text-align: center; }
+    h2 { text-align: center; margin: 4mm 0; font-size: 16px; }
+    @page { size: A4 portrait; margin: 4mm; }
+  </style>
+  
+<style>
+.container-full{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+#allProductsBoxFull{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+.main-grid{
+    background:#cce7ff !important;
+    padding:12px !important;
+    border-radius:12px;
+}
+</style>
+
+
+<style>
+.left-panel{
+    background:transparent !important;
+}
+</style>
+
+</head><body>`;
+
+  // PAGE 1 — TITLE + HEADERS + 19 ROWS
+  output += `<h2>ZAPASY W SPIŻARNI</h2>`;
+  output += `<table><thead>${header}</thead><tbody>`;
+  firstChunk.forEach(tr => output += tr.outerHTML);
+  output += `</tbody></table>`;
+
+  // NEXT PAGES — ONLY DATA, NO HEADERS
+  otherChunks.forEach(chunk => {
+    output += `<table><tbody>`;
+    chunk.forEach(tr => output += tr.outerHTML);
+    output += `</tbody></table>`;
+  });
+
+  output += "<style>
+/* 3x bigger font for first column in Sort Produkty and Sort Przyprawy */
+#sortProduktyTable td:first-child,
+#sortPrzyprawyTable td:first-child {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Increase headers in SORT tables */
+#sortProduktyTable th,
+#sortPrzyprawyTable th {
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Widen Code128 barcodes and enlarge digits under them in sort windows */
+#sortProduktyTable img,
+#sortPrzyprawyTable img {
+    width: 300px !important;
+}
+
+#sortProduktyTable svg text,
+#sortPrzyprawyTable svg text {
+    font-size: 2.4rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<script>
+function updateYearZapraw(){
+    try{
+        const label=document.getElementById('yearZaprawBoxLabel').value;
+        const m=label.match(/(\d{4})/);
+        if(!m)return;
+        const yr=m[1];
+        let sum=0;
+        (products||[]).forEach(p=>{
+            if((p.name||'').toLowerCase().includes('(zaprawy')){
+                (p.parties||[]).forEach(pt=>{
+                    if(pt.expiry && pt.expiry.startsWith(yr)) sum+=(parseInt(pt.qty)||0);
+                });
+            }
+        });
+        const el=document.getElementById('yearZaprawQty');
+        if(el) el.textContent=sum;
+    }catch(e){}
+}
+
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script>
+function updateYearZapraw(){
+ try{
+   const label=document.getElementById('yearZaprawBoxLabel').value||"";
+   const m=label.match(/(\d{4})/);
+   if(!m) return;
+   const yr=m[1];
+   const products = JSON.parse(localStorage.getItem("products")||"[]");
+   let sum=0;
+   products.forEach(p=>{
+     if((p.name||"").toLowerCase().includes("(zaprawy") && p.name.includes(yr)){
+        sum += (p.parties||[]).reduce((a,b)=>a+(parseInt(b.qty)||0),0);
+     }
+   });
+   const el=document.getElementById('yearZaprawQty');
+   if(el) el.textContent=sum;
+ }catch(e){}
+}
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+
+<script>
+function printTableById(id){
+  const t=document.getElementById(id);
+  if(!t){alert("Brak tabeli: "+id);return;}
+  const w=window.open("", "_blank");
+  w.document.write("<html><head><title>Drukuj</title><style>table{width:100%;border-collapse:collapse;} td,th{border:1px solid #000;padding:4px;text-align:center;}</style></head><body>");
+  w.document.write(t.outerHTML);
+  w.document.write("</body></html>");
+  w.document.close();
+  w.print();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const p1=document.getElementById("printSortProduktyBtn");
+  if(p1) p1.onclick=()=>printTableById("sortProduktyTable");
+  const p2=document.getElementById("printSortPrzyprawyBtn");
+  if(p2) p2.onclick=()=>printTableById("sortPrzyprawyTable");
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+</body></html>";
+
+  const printWin = window.open("", "_blank");
+  printWin.document.write(output);
+  printWin.document.close();
+  printWin.focus();
+
+  setTimeout(() => { printWin.print(); printWin.close(); }, 250);
+}
+const rows = Array.from(table.querySelectorAll("tbody tr"));
+  const header = table.querySelector("thead")?.innerHTML || "";
+  if (!rows.length) { alert("Brak danych do druku!"); return; }
+
+  const firstChunk = rows.slice(0, 19);
+  const otherChunks = [];
+  for (let i = 19; i < rows.length; i += 20) {
+    otherChunks.push(rows.slice(i, i + 20));
+  }
+
+  let html = `<html><head><title>Druk</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
+    td, th { border: 1px solid #000; padding: 3px; font-size: 12px; text-align:center; }
+    h2 { text-align:center; margin-bottom:10px; font-size:18px; }
+    @page { margin: 6mm; }
+  </style>
+  
+<style>
+.container-full{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+#allProductsBoxFull{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+.main-grid{
+    background:#cce7ff !important;
+    padding:12px !important;
+    border-radius:12px;
+}
+</style>
+
+
+<style>
+.left-panel{
+    background:transparent !important;
+}
+</style>
+
+</head><body>`;
+
+  html += `<h2>ZAPASY W SPIŻARNI</h2>`;
+  html += `<table><thead>${header}</thead><tbody>`;
+  firstChunk.forEach(tr => html += tr.outerHTML);
+  html += `</tbody></table>`;
+
+  otherChunks.forEach(chunk => {
+    html += `<table><tbody>`;
+    chunk.forEach(tr => html += tr.outerHTML);
+    html += `</tbody></table>`;
+  });
+
+  html += "<style>
+/* 3x bigger font for first column in Sort Produkty and Sort Przyprawy */
+#sortProduktyTable td:first-child,
+#sortPrzyprawyTable td:first-child {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Increase headers in SORT tables */
+#sortProduktyTable th,
+#sortPrzyprawyTable th {
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Widen Code128 barcodes and enlarge digits under them in sort windows */
+#sortProduktyTable img,
+#sortPrzyprawyTable img {
+    width: 300px !important;
+}
+
+#sortProduktyTable svg text,
+#sortPrzyprawyTable svg text {
+    font-size: 2.4rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<script>
+function updateYearZapraw(){
+    try{
+        const label=document.getElementById('yearZaprawBoxLabel').value;
+        const m=label.match(/(\d{4})/);
+        if(!m)return;
+        const yr=m[1];
+        let sum=0;
+        (products||[]).forEach(p=>{
+            if((p.name||'').toLowerCase().includes('(zaprawy')){
+                (p.parties||[]).forEach(pt=>{
+                    if(pt.expiry && pt.expiry.startsWith(yr)) sum+=(parseInt(pt.qty)||0);
+                });
+            }
+        });
+        const el=document.getElementById('yearZaprawQty');
+        if(el) el.textContent=sum;
+    }catch(e){}
+}
+
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script>
+function updateYearZapraw(){
+ try{
+   const label=document.getElementById('yearZaprawBoxLabel').value||"";
+   const m=label.match(/(\d{4})/);
+   if(!m) return;
+   const yr=m[1];
+   const products = JSON.parse(localStorage.getItem("products")||"[]");
+   let sum=0;
+   products.forEach(p=>{
+     if((p.name||"").toLowerCase().includes("(zaprawy") && p.name.includes(yr)){
+        sum += (p.parties||[]).reduce((a,b)=>a+(parseInt(b.qty)||0),0);
+     }
+   });
+   const el=document.getElementById('yearZaprawQty');
+   if(el) el.textContent=sum;
+ }catch(e){}
+}
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+
+<script>
+function printTableById(id){
+  const t=document.getElementById(id);
+  if(!t){alert("Brak tabeli: "+id);return;}
+  const w=window.open("", "_blank");
+  w.document.write("<html><head><title>Drukuj</title><style>table{width:100%;border-collapse:collapse;} td,th{border:1px solid #000;padding:4px;text-align:center;}</style></head><body>");
+  w.document.write(t.outerHTML);
+  w.document.write("</body></html>");
+  w.document.close();
+  w.print();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const p1=document.getElementById("printSortProduktyBtn");
+  if(p1) p1.onclick=()=>printTableById("sortProduktyTable");
+  const p2=document.getElementById("printSortPrzyprawyBtn");
+  if(p2) p2.onclick=()=>printTableById("sortPrzyprawyTable");
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+</body></html>";
+
+  const w = window.open("", "_blank");
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); w.close(); }, 300);
+}
+const rows = Array.from(table.querySelectorAll("tbody tr"));
+  const header = table.querySelector("thead").innerHTML;
+  if (!rows.length) { alert("Brak danych do druku!"); return; }
+
+  const firstChunk = rows.slice(0, 19);
+  const otherChunks = [];
+  for (let i = 19; i < rows.length; i += 20) {
+    otherChunks.push(rows.slice(i, i + 20));
+  }
+
+  let html = `<html><head><title>Druk</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; margin-bottom: 10mm; }
+    td, th { border: 1px solid #000; padding: 6px; font-size: 14px; text-align:center; }
+    h2 { text-align:center; margin-bottom:12px; }
+    @page { margin: 10mm; }
+  </style>
+  
+<style>
+.container-full{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+#allProductsBoxFull{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+.main-grid{
+    background:#cce7ff !important;
+    padding:12px !important;
+    border-radius:12px;
+}
+</style>
+
+
+<style>
+.left-panel{
+    background:transparent !important;
+}
+</style>
+
+</head><body>`;
+
+  html += `<h2>ZAPASY W SPIŻARNI</h2>`;
+  html += `<table><thead>${header}</thead><tbody>`;
+  firstChunk.forEach(tr => html += tr.outerHTML);
+  html += `</tbody></table>`;
+
+  otherChunks.forEach(chunk => {
+    html += `<table><tbody>`;
+    chunk.forEach(tr => html += tr.outerHTML);
+    html += `</tbody></table>`;
+  });
+
+  html += "<style>
+/* 3x bigger font for first column in Sort Produkty and Sort Przyprawy */
+#sortProduktyTable td:first-child,
+#sortPrzyprawyTable td:first-child {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Increase headers in SORT tables */
+#sortProduktyTable th,
+#sortPrzyprawyTable th {
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Widen Code128 barcodes and enlarge digits under them in sort windows */
+#sortProduktyTable img,
+#sortPrzyprawyTable img {
+    width: 300px !important;
+}
+
+#sortProduktyTable svg text,
+#sortPrzyprawyTable svg text {
+    font-size: 2.4rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<script>
+function updateYearZapraw(){
+    try{
+        const label=document.getElementById('yearZaprawBoxLabel').value;
+        const m=label.match(/(\d{4})/);
+        if(!m)return;
+        const yr=m[1];
+        let sum=0;
+        (products||[]).forEach(p=>{
+            if((p.name||'').toLowerCase().includes('(zaprawy')){
+                (p.parties||[]).forEach(pt=>{
+                    if(pt.expiry && pt.expiry.startsWith(yr)) sum+=(parseInt(pt.qty)||0);
+                });
+            }
+        });
+        const el=document.getElementById('yearZaprawQty');
+        if(el) el.textContent=sum;
+    }catch(e){}
+}
+
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script>
+function updateYearZapraw(){
+ try{
+   const label=document.getElementById('yearZaprawBoxLabel').value||"";
+   const m=label.match(/(\d{4})/);
+   if(!m) return;
+   const yr=m[1];
+   const products = JSON.parse(localStorage.getItem("products")||"[]");
+   let sum=0;
+   products.forEach(p=>{
+     if((p.name||"").toLowerCase().includes("(zaprawy") && p.name.includes(yr)){
+        sum += (p.parties||[]).reduce((a,b)=>a+(parseInt(b.qty)||0),0);
+     }
+   });
+   const el=document.getElementById('yearZaprawQty');
+   if(el) el.textContent=sum;
+ }catch(e){}
+}
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+
+<script>
+function printTableById(id){
+  const t=document.getElementById(id);
+  if(!t){alert("Brak tabeli: "+id);return;}
+  const w=window.open("", "_blank");
+  w.document.write("<html><head><title>Drukuj</title><style>table{width:100%;border-collapse:collapse;} td,th{border:1px solid #000;padding:4px;text-align:center;}</style></head><body>");
+  w.document.write(t.outerHTML);
+  w.document.write("</body></html>");
+  w.document.close();
+  w.print();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const p1=document.getElementById("printSortProduktyBtn");
+  if(p1) p1.onclick=()=>printTableById("sortProduktyTable");
+  const p2=document.getElementById("printSortPrzyprawyBtn");
+  if(p2) p2.onclick=()=>printTableById("sortPrzyprawyTable");
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+</body></html>";
+
+  const w = window.open("", "_blank");
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); w.close(); }, 250);
+}
+
+  const w = window.open("", "_blank");
+  w.document.write(`<html><head><title>Druk</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; }
+    td, th { border: 1px solid #000; padding: 6px; font-size: 14px; text-align:center; }
+    @page { margin: 10mm; }
+  </style>
+  
+<style>
+.container-full{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+#allProductsBoxFull{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+.main-grid{
+    background:#cce7ff !important;
+    padding:12px !important;
+    border-radius:12px;
+}
+</style>
+
+
+<style>
+.left-panel{
+    background:transparent !important;
+}
+</style>
+
+</head><body>${table.outerHTML}<style>
+/* 3x bigger font for first column in Sort Produkty and Sort Przyprawy */
+#sortProduktyTable td:first-child,
+#sortPrzyprawyTable td:first-child {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Increase headers in SORT tables */
+#sortProduktyTable th,
+#sortPrzyprawyTable th {
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Widen Code128 barcodes and enlarge digits under them in sort windows */
+#sortProduktyTable img,
+#sortPrzyprawyTable img {
+    width: 300px !important;
+}
+
+#sortProduktyTable svg text,
+#sortPrzyprawyTable svg text {
+    font-size: 2.4rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<script>
+function updateYearZapraw(){
+    try{
+        const label=document.getElementById('yearZaprawBoxLabel').value;
+        const m=label.match(/(\d{4})/);
+        if(!m)return;
+        const yr=m[1];
+        let sum=0;
+        (products||[]).forEach(p=>{
+            if((p.name||'').toLowerCase().includes('(zaprawy')){
+                (p.parties||[]).forEach(pt=>{
+                    if(pt.expiry && pt.expiry.startsWith(yr)) sum+=(parseInt(pt.qty)||0);
+                });
+            }
+        });
+        const el=document.getElementById('yearZaprawQty');
+        if(el) el.textContent=sum;
+    }catch(e){}
+}
+
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script>
+function updateYearZapraw(){
+ try{
+   const label=document.getElementById('yearZaprawBoxLabel').value||"";
+   const m=label.match(/(\d{4})/);
+   if(!m) return;
+   const yr=m[1];
+   const products = JSON.parse(localStorage.getItem("products")||"[]");
+   let sum=0;
+   products.forEach(p=>{
+     if((p.name||"").toLowerCase().includes("(zaprawy") && p.name.includes(yr)){
+        sum += (p.parties||[]).reduce((a,b)=>a+(parseInt(b.qty)||0),0);
+     }
+   });
+   const el=document.getElementById('yearZaprawQty');
+   if(el) el.textContent=sum;
+ }catch(e){}
+}
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+
+<script>
+function printTableById(id){
+  const t=document.getElementById(id);
+  if(!t){alert("Brak tabeli: "+id);return;}
+  const w=window.open("", "_blank");
+  w.document.write("<html><head><title>Drukuj</title><style>table{width:100%;border-collapse:collapse;} td,th{border:1px solid #000;padding:4px;text-align:center;}</style></head><body>");
+  w.document.write(t.outerHTML);
+  w.document.write("</body></html>");
+  w.document.close();
+  w.print();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const p1=document.getElementById("printSortProduktyBtn");
+  if(p1) p1.onclick=()=>printTableById("sortProduktyTable");
+  const p2=document.getElementById("printSortPrzyprawyBtn");
+  if(p2) p2.onclick=()=>printTableById("sortPrzyprawyTable");
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); w.close(); }, 200);
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  const btnProd = document.getElementById("printProduktyBtn");
+  if(btnProd) btnProd.addEventListener("click", ()=> printTableById("produktyPrintTable_modal"));
+
+  const btnSpice = document.getElementById("printPrzyprawyBtn");
+  if(btnSpice) btnSpice.addEventListener("click", ()=> printTableById("przyprawyPrintTable_modal"));
+
+  const btnSortProd = document.getElementById("printSortProduktyBtn");
+  if(btnSortProd) btnSortProd.addEventListener("click", ()=> printTableById("sortProduktyTable"));
+
+  const btnSortSpice = document.getElementById("printSortPrzyprawyBtn");
+  if(btnSortSpice) btnSortSpice.addEventListener("click", ()=> printTableById("sortPrzyprawyTable"));
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<style>
+/* 3x bigger font for first column in Sort Produkty and Sort Przyprawy */
+#sortProduktyTable td:first-child,
+#sortPrzyprawyTable td:first-child {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Increase headers in SORT tables */
+#sortProduktyTable th,
+#sortPrzyprawyTable th {
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Widen Code128 barcodes and enlarge digits under them in sort windows */
+#sortProduktyTable img,
+#sortPrzyprawyTable img {
+    width: 300px !important;
+}
+
+#sortProduktyTable svg text,
+#sortPrzyprawyTable svg text {
+    font-size: 2.4rem !important;
+    font-weight: 900 !important;
+}
+</style>
+</div><script>
+function updateYearZapraw(){
+    try{
+        const label=document.getElementById('yearZaprawBoxLabel').value;
+        const m=label.match(/(\d{4})/);
+        if(!m)return;
+        const yr=m[1];
+        let sum=0;
+        (products||[]).forEach(p=>{
+            if((p.name||'').toLowerCase().includes('(zaprawy')){
+                (p.parties||[]).forEach(pt=>{
+                    if(pt.expiry && pt.expiry.startsWith(yr)) sum+=(parseInt(pt.qty)||0);
+                });
+            }
+        });
+        const el=document.getElementById('yearZaprawQty');
+        if(el) el.textContent=sum;
+    }catch(e){}
+}
+
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script>
+function updateYearZapraw(){
+ try{
+   const label=document.getElementById('yearZaprawBoxLabel').value||"";
+   const m=label.match(/(\d{4})/);
+   if(!m) return;
+   const yr=m[1];
+   const products = JSON.parse(localStorage.getItem("products")||"[]");
+   let sum=0;
+   products.forEach(p=>{
+     if((p.name||"").toLowerCase().includes("(zaprawy") && p.name.includes(yr)){
+        sum += (p.parties||[]).reduce((a,b)=>a+(parseInt(b.qty)||0),0);
+     }
+   });
+   const el=document.getElementById('yearZaprawQty');
+   if(el) el.textContent=sum;
+ }catch(e){}
+}
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+
+<script>
+function printTableById(id){
+  const t=document.getElementById(id);
+  if(!t){alert("Brak tabeli: "+id);return;}
+  const w=window.open("", "_blank");
+  w.document.write("<html><head><title>Drukuj</title><style>table{width:100%;border-collapse:collapse;} td,th{border:1px solid #000;padding:4px;text-align:center;}</style></head><body>");
+  w.document.write(t.outerHTML);
+  w.document.write("</body></html>");
+  w.document.close();
+  w.print();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const p1=document.getElementById("printSortProduktyBtn");
+  if(p1) p1.onclick=()=>printTableById("sortProduktyTable");
+  const p2=document.getElementById("printSortPrzyprawyBtn");
+  if(p2) p2.onclick=()=>printTableById("sortPrzyprawyTable");
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+</body></html>');
+  w.document.close();
+  w.focus();
+  setTimeout(()=&gt;{ w.print(); w.close(); }, 150);
+}
+
+document.addEventListener('click', e=&gt;{
+  if(e.target.id==='printBtnOverride'){
+    e.preventDefault();
+    printVisibleTable();
+  }
+});
+
+<script>
+function printTableById(tableId){
+  const table = document.getElementById(tableId);
+  if(!table){ alert("Nie znaleziono tabeli do druku!"); return; }
+  const w = window.open("", "_blank");
+  w.document.write(`<html><head><title>Druk</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; }
+    td, th { border: 1px solid #000; padding: 6px; font-size: 14px; text-align:center; }
+    @page { margin: 10mm; }
+  </style>
+  
+<style>
+.container-full{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+#allProductsBoxFull{
+    background:#cce7ff !important;
+}
+</style>
+
+
+<style>
+.main-grid{
+    background:#cce7ff !important;
+    padding:12px !important;
+    border-radius:12px;
+}
+</style>
+
+
+<style>
+.left-panel{
+    background:transparent !important;
+}
+</style>
+
+</head><body>${table.outerHTML}<style>
+/* 3x bigger font for first column in Sort Produkty and Sort Przyprawy */
+#sortProduktyTable td:first-child,
+#sortPrzyprawyTable td:first-child {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Increase headers in SORT tables */
+#sortProduktyTable th,
+#sortPrzyprawyTable th {
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Widen Code128 barcodes and enlarge digits under them in sort windows */
+#sortProduktyTable img,
+#sortPrzyprawyTable img {
+    width: 300px !important;
+}
+
+#sortProduktyTable svg text,
+#sortPrzyprawyTable svg text {
+    font-size: 2.4rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<script>
+function updateYearZapraw(){
+    try{
+        const label=document.getElementById('yearZaprawBoxLabel').value;
+        const m=label.match(/(\d{4})/);
+        if(!m)return;
+        const yr=m[1];
+        let sum=0;
+        (products||[]).forEach(p=>{
+            if((p.name||'').toLowerCase().includes('(zaprawy')){
+                (p.parties||[]).forEach(pt=>{
+                    if(pt.expiry && pt.expiry.startsWith(yr)) sum+=(parseInt(pt.qty)||0);
+                });
+            }
+        });
+        const el=document.getElementById('yearZaprawQty');
+        if(el) el.textContent=sum;
+    }catch(e){}
+}
+
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<script>
+function updateYearZapraw(){
+ try{
+   const label=document.getElementById('yearZaprawBoxLabel').value||"";
+   const m=label.match(/(\d{4})/);
+   if(!m) return;
+   const yr=m[1];
+   const products = JSON.parse(localStorage.getItem("products")||"[]");
+   let sum=0;
+   products.forEach(p=>{
+     if((p.name||"").toLowerCase().includes("(zaprawy") && p.name.includes(yr)){
+        sum += (p.parties||[]).reduce((a,b)=>a+(parseInt(b.qty)||0),0);
+     }
+   });
+   const el=document.getElementById('yearZaprawQty');
+   if(el) el.textContent=sum;
+ }catch(e){}
+}
+setInterval(updateYearZapraw,1000);
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+
+<script>
+function printTableById(id){
+  const t=document.getElementById(id);
+  if(!t){alert("Brak tabeli: "+id);return;}
+  const w=window.open("", "_blank");
+  w.document.write("<html><head><title>Drukuj</title><style>table{width:100%;border-collapse:collapse;} td,th{border:1px solid #000;padding:4px;text-align:center;}</style></head><body>");
+  w.document.write(t.outerHTML);
+  w.document.write("</body></html>");
+  w.document.close();
+  w.print();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const p1=document.getElementById("printSortProduktyBtn");
+  if(p1) p1.onclick=()=>printTableById("sortProduktyTable");
+  const p2=document.getElementById("printSortPrzyprawyBtn");
+  if(p2) p2.onclick=()=>printTableById("sortPrzyprawyTable");
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+
+</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); w.close(); }, 200);
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  const btnProd = document.getElementById("printProduktyBtn");
+  if(btnProd) btnProd.addEventListener("click", ()=> printTableById("produktyPrintTable_modal"));
+
+  const btnSpice = document.getElementById("printPrzyprawyBtn");
+  if(btnSpice) btnSpice.addEventListener("click", ()=> printTableById("przyprawyPrintTable_modal"));
+
+  const btnSortProd = document.getElementById("printSortProduktyBtn");
+  if(btnSortProd) btnSortProd.addEventListener("click", ()=> printTableById("sortProduktyTable"));
+
+  const btnSortSpice = document.getElementById("printSortPrzyprawyBtn");
+  if(btnSortSpice) btnSortSpice.addEventListener("click", ()=> printTableById("sortPrzyprawyTable"));
+});
+
+document.getElementById('printShoppingBtn').addEventListener('click', ()=>{
+  const checks=[...document.querySelectorAll('#sortedProductsTable .buyCheck')].filter(c=>c.checked);
+  let out='';
+  checks.forEach(c=>{
+    out+=c.dataset.name + ' - ' + c.dataset.qty + ' szt\n';
+  });
+  const w=window.open('','_blank');
+  w.document.write('<pre>'+out+'</pre>');
+  w.print();
+  w.close();
+  checks.forEach(c=>c.checked=false);
+});
+
+
+document.getElementById('autoSelectQty').addEventListener('input', function(){
+  const val = this.value.trim();
+  if(!val) return;
+  const qtyTarget = parseInt(val);
+  if(isNaN(qtyTarget)) return;
+  document.querySelectorAll('#sortedProductsTable tbody tr').forEach(tr=>{
+    const qtyCell = tr.cells[3];
+    if(!qtyCell) return;
+    const q = parseInt(qtyCell.textContent.trim());
+    if(q === qtyTarget){
+      const cb = tr.cells[2].querySelector('input[type=checkbox]');
+      if(cb) cb.checked = true;
+    }
+  });
+});
+
+</script>
+<style>
+/* 3x bigger font for first column in Sort Produkty and Sort Przyprawy */
+#sortProduktyTable td:first-child,
+#sortPrzyprawyTable td:first-child {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Increase headers in SORT tables */
+#sortProduktyTable th,
+#sortPrzyprawyTable th {
+    font-size: 1.6rem !important;
+    font-weight: 900 !important;
+}
+</style>
+<style>
+/* Widen Code128 barcodes and enlarge digits under them in sort windows */
+#sortProduktyTable img,
+#sortPrzyprawyTable img {
+    width: 300px !important;
+}
+
+#sortProduktyTable svg text,
+#sortPrzyprawyTable svg text {
+    font-size: 2.4rem !important;
+    font-weight: 900 !important;
+}
+</style>
